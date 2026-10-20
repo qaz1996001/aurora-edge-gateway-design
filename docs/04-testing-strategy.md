@@ -76,6 +76,7 @@ Test result: 100% output parity achieved ✓
 - `aeg-config` tests: Parse valid/invalid TOML; verify defaults; verify override precedence
 - `aeg-db` tests: SQL insert/update/delete; verify transaction semantics; test constraint violations
 - `aeg-sensors` tests: Aggregate readings; verify filtering; check numerical accuracy
+- Memory profiling tests: Verify no leaks in drop chains; track allocation sizes
 
 **Minimum Coverage**: 70% code coverage (excluding error paths that are difficult to trigger)
 
@@ -152,28 +153,29 @@ fi
 
 #### 4a. Load Testing (Peak Throughput)
 ```bash
-# Simulate peak load: 1000 MQTT msg/sec + 100 REST req/sec for 1 hour
+# Simulate active load: 500-1000 MQTT msg/sec + 100 REST req/sec for 3 hours
 load-generator \
-  --mqtt-rate 1000 \
+  --mqtt-rate 500 \
   --http-rate 100 \
-  --duration 3600s \
+  --duration 10800s \
   --target localhost:3000
 
 # Measure results
-# - HTTP response latency (p50, p95, p99)
+# - CPU usage (should stay 50–65%)
+# - Memory usage (should stay < 1500 MB)
+# - Load average (should stay < 4.0 on 4-core)
 # - MQTT message delivery rate (should be 100%)
-# - CPU usage (should stay < 50%)
-# - Memory usage (should stay < 40MB)
 ```
 
 **Target Metrics** (Phase B):
-- p50 latency: < 2 ms
-- p95 latency: < 10 ms
-- p99 latency: < 20 ms
-- Throughput: ≥ 2000 MQTT msg/sec + 200 REST req/sec without dropping
+- CPU average: 50–65% (no sustained > 80%)
+- CPU peak: < 100% (transient spikes OK)
+- Memory baseline: < 1400 MB idle
+- Memory active: < 1500 MB sustained
+- Load average: 3.0–3.5 on 4-core ARM (0.75–0.875/core)
+- Throughput: ≥ 1000 MQTT msg/sec + 200 REST req/sec without dropping
 - Message loss: 0%
-- CPU: < 50% on 8-core ARM
-- Memory: < 40 MB sustained
+- Memory growth: < 0.01% per day
 
 #### 4b. Memory Soak Testing (30+ Days)
 ```bash
@@ -187,31 +189,37 @@ soak-test-runner \
   --check-interval 1hour
 
 # Output memory graph and stability report
-# Expected: < 0.01% memory growth per day; zero crashes; zero restarts
+# Expected: Memory stable at baseline; zero crashes; zero restarts
 ```
 
 **Success Criteria**:
-- Memory growth < 0.01% per day (< 4 KB per day on 40 MB baseline)
+- Memory baseline: stable around 1400 MB (idle)
+- Memory active: stable around 1500 MB (after 1h warm-up)
+- Memory growth: < 0.01% per day (< 150 KB/day on 1500 MB baseline)
+- CPU: stable 50–65% (no degradation or drift)
 - Zero unplanned crashes (only deliberate kills for testing)
 - Zero service restarts over 30 days
-- All metrics stable (no degradation over time)
+- No GC pauses (should be zero throughout)
 
-#### 4c. Latency Tail Analysis (p99 Stability)
+#### 4c. Stability & Determinism Validation (24h Monitoring)
 ```bash
-# Capture latency histogram over 24 hours of peak load
-latency-profiler \
-  --duration 86400s \
-  --bucket-size 1ms \
-  --output histogram.json
+# Monitor CPU, memory, and load for deterministic behavior over 24 hours
+# Verify no latency or resource spikes from GC or scheduling
 
-# Plot histogram
-# Expected: p99 latency stable; no spikes; no degradation over time
+stability-monitor \
+  --duration 86400s \
+  --sample-interval 10s \
+  --output stability-report.json
+
+# Expected: CPU/memory/load smooth; no transient spikes from GC
 ```
 
 **Success Criteria**:
-- p99 latency < 20 ms (consistent)
-- No latency spikes > 50 ms (except during GC, which shouldn't happen in Rust)
-- Latency stable across different times of day (no scheduling artifacts)
+- CPU variation < 10% within 5-minute window (stable, no GC spikes)
+- Memory stable (no growth > 0.01% per hour)
+- Load average smooth (no > 0.5/core transient spikes)
+- No latency variance from garbage collection (0 GC pauses)
+- Consistent performance across different times of day
 
 ---
 

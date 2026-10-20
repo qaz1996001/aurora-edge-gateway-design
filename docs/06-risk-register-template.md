@@ -77,9 +77,9 @@ Risks related to external factors outside team control.
 ---
 
 ### 🟡 MEDIUM
-**Impact**: Partial functionality loss or performance degradation
+**Impact**: Partial functionality loss or resource degradation
 
-**Example**: Sensor reads delayed 50ms under peak load (target is < 10ms)
+**Example**: CPU usage drifts to > 75% under sustained load, leaving < 10% headroom
 
 **Recovery Time**: 30 min – 2 hours
 
