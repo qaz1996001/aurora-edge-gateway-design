@@ -7,63 +7,18 @@
 - **Downstream**: Industrial sensors and equipment — USB Audio (vibration capture), Modbus RTU over USB-RS485 (current/power), USB serial (temperature), and serial (beacon / indicator lights)
 
 ### C4 Context Diagram
-See `../diagrams/context-diagram.svg` for a visual overview of external dependencies and data flows.
+
+![System context: cloud, edge gateway, field hardware](../diagrams/context-diagram.png)
+
+<sub>Vector source: [`context-diagram.svg`](../diagrams/context-diagram.svg)</sub>
 
 ## Before: Node.js Architecture
 
 ### System Topology (Original)
 
-```
-    ┌─────────────────────────────────────────────────────┐
-    │ Cloud Backend (REST API, data ingestion)             │
-    └─────────────────────────────────────────────────────┘
-                     ↕ REST (heartbeat & batch sync)
-                     ┄ optional MQTT uplink (factory-disabled)
-┌─ Edge Device (ARM Linux, 4-core Cortex-A53) ────────────────┐
-│                                                              │
-│  Process Supervisor (process manager) managing 16 Node.js/  │
-│  Python services across 8 startup phases (~20 processes     │
-│  observed in production, incl. supervisor, threshold sync,  │
-│  log rotation, and dynamic sensor processes):                │
-│                                                              │
-│  ┌──────────────────────┐  ┌──────────────────────┐         │
-│  │ appserver (Node.js)  │  │ mqtt-client (Node.js)│         │
-│  │ (Express HTTP)       │  │ (mqtt client)        │         │
-│  └──────────────────────┘  └──────────────────────┘         │
-│                                                              │
-│  ┌──────────────────────┐  ┌──────────────────────┐         │
-│  │ sensor-data (Node.js)│  │ beacon-control        │         │
-│  │ (aggregation, DSP)   │  │ (Node.js, serial port)│         │
-│  └──────────────────────┘  └──────────────────────┘         │
-│                                                              │
-│  ┌──────────────────────┐  ┌──────────────────────┐         │
-│  │ file-manager (Node.js)│ │ ota-updater (Node.js)│         │
-│  │ (file I/O)           │  │ (firmware updates)   │         │
-│  └──────────────────────┘  └──────────────────────┘         │
-│                                                              │
-│  ┌──────────────────────┐  ┌──────────────────────┐         │
-│  │ metrics-engine        │  │ python-bridge        │         │
-│  │ (Node.js, signal RMS  │  │ (Python subprocess)  │         │
-│  │  aggregation)         │  │                      │         │
-│  └──────────────────────┘  └──────────────────────┘         │
-│                                                              │
-│  Internal message bus (MQTT, in-process event emitters)     │
-│  Database file (SQLite3, shared mmap)                       │
-│  Config & state files (TOML, JSON)                           │
-│  Per-service memory caps: 200 MB – 2 GB, enforced by the     │
-│  process manager (auto-restart on breach)                    │
-│                                                              │
-│  Total memory (3h active load): 1538 MB (~54% of ~2.84 GB    │
-│  OS-usable); CPU: 52% idle / 64% 3h-active; load avg          │
-│  3.30 / 4 cores; boot → all services online: ~2m30s           │
-└──────────────────────────────────────────────────────────────┘
-                     ↕ Serial / USB
-    ┌─────────────────────────────────────────────────────┐
-    │ Industrial Sensors: USB Audio (vibration), Modbus     │
-    │ RTU over USB-RS485 (current/power), USB serial         │
-    │ (temperature), serial (beacon / indicator lights)      │
-    └─────────────────────────────────────────────────────┘
-```
+![Deployment topology, Node.js baseline](../diagrams/before-topology.png)
+
+<sub>Vector source: [`before-topology.svg`](../diagrams/before-topology.svg)</sub>
 
 ### Problems
 
@@ -81,66 +36,9 @@ While the multi-process architecture provides basic fault isolation, individual 
 
 ### System Topology (Rust Rewrite)
 
-```
-    ┌─────────────────────────────────────────────────────┐
-    │ Cloud Backend (primary uplink via REST)               │
-    └─────────────────────────────────────────────────────┘
-                     ↕ REST (heartbeat & batch sync)
-                     ┄ optional MQTT acceleration uplink
-                       (factory-disabled; opt-in via config)
-┌─ Edge Device (ARM Linux, 4-core Cortex-A53) ────────────────┐
-│                                                              │
-│  Single systemd unit (aeg-supervisor) launches and          │
-│  supervises 14 services as child processes:                 │
-│                                                              │
-│  ┌─────────────────┐  ┌──────────────┐  ┌──────────────┐   │
-│  │ aeg-appserver   │  │ aeg-sensors  │  │ aeg-beacon   │   │
-│  │ (Axum REST API) │  │ (aggregation)│  │ (serial port │   │
-│  │                 │  │              │  │  control)    │   │
-│  └─────────────────┘  └──────────────┘  └──────────────┘   │
-│                                                              │
-│  ┌──────────────┐  ┌───────────────┐  ┌──────────────┐     │
-│  │ aeg-ota      │  │ aeg-config    │  │ aeg-metrics  │     │
-│  │ (firmware)   │  │ (TOML parse)  │  │ (signal RMS  │     │
-│  │              │  │               │  │  aggregation)│     │
-│  └──────────────┘  └───────────────┘  └──────────────┘     │
-│                                                              │
-│  ... plus 8 further supervised services (aeg-db,            │
-│  aeg-file-manager, aeg-python-bridge, aeg-mqtt-client,       │
-│  log/rotation, watchdog, threshold sync, and others)         │
-│                                                              │
-│  ┌────────────────────────────────────────────────────┐    │
-│  │  Internal Message Bus (local MQTT broker):          │    │
-│  │  - Services publish/subscribe for inter-process     │    │
-│  │    events (sensor updates, config changes)          │    │
-│  │  - NOT cloud uplink; separate from REST API          │    │
-│  └────────────────────────────────────────────────────┘    │
-│                                                              │
-│  Shared Infrastructure:                                     │
-│  - aeg-db (rusqlite SQLite wrapper, compiled into binaries) │
-│  - aeg-python-bridge (local IPC → Python subprocess)         │
-│  - inter-service IPC via the internal message bus above     │
-│    (not systemd socket activation)                          │
-│  - structured logging via journald                          │
-│                                                              │
-│  Python Subprocess (DSP/ML):                                │
-│  - signal-processing (Fourier, filtering)                    │
-│  - ml-inference (lightweight models)                        │
-│  - Spawned on-demand; killed after task completion           │
-│                                                              │
-│  Total memory footprint (14 supervised services + Python     │
-│  subprocess, 1 vibration sensor active): 206 MB               │
-│  CPU (7.8h soak): 6.3% avg / 8.8% peak, zero overnight drift  │
-│  Load avg (7.8h soak): 0.50 avg / 1.81 peak (always < 2       │
-│  cores); 3 restarts in first 66 min, then 6.7h zero restarts │
-└───────────────────────────────────────────────────────────────┘
-                     ↕ Serial / USB
-    ┌─────────────────────────────────────────────────────┐
-    │ Industrial Sensors: USB Audio (vibration), Modbus      │
-    │ RTU over USB-RS485 (current/power), USB serial          │
-    │ (temperature), serial (beacon / indicator lights)        │
-    └─────────────────────────────────────────────────────┘
-```
+![Deployment topology, Rust rewrite](../diagrams/deployment-topology.png)
+
+<sub>Vector source: [`deployment-topology.svg`](../diagrams/deployment-topology.svg)</sub>
 
 ### Advantages
 1. **Modular**: Each crate/binary is independently restartable; failure isolation
@@ -154,7 +52,9 @@ While the multi-process architecture provides basic fault isolation, individual 
 
 ## Module → Crate → Binary Mapping
 
-See `../diagrams/module-crate-mapping.svg` for a detailed breakdown.
+![Node.js service to Rust crate mapping](../diagrams/module-crate-mapping.png)
+
+<sub>Vector source: [`module-crate-mapping.svg`](../diagrams/module-crate-mapping.svg)</sub>
 
 ### Example Mapping
 

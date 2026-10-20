@@ -138,7 +138,9 @@ Target metrics from Problem Statement:
 ### Philosophy
 Incremental deployment with automated safety gates; each stage can be rolled back in < 1 minute.
 
-See `../diagrams/staged-rollout-timeline.svg` for visual timeline.
+![Stage 0 to Stage 4 rollout timeline](../diagrams/staged-rollout-timeline.png)
+
+<sub>Vector source: [`staged-rollout-timeline.svg`](../diagrams/staged-rollout-timeline.svg)</sub>
 
 ---
 

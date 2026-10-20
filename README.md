@@ -43,8 +43,9 @@ Each ADR captures a single architectural decision with rationale, trade-offs, an
 #### Visual Diagrams
 Located in `/diagrams/`:
 - `context-diagram.svg` — C4-style context diagram showing Aurora Edge Gateway and its external dependencies
+- `before-topology.svg` — Node.js baseline topology (process manager, 16 services across 8 startup phases)
 - `module-crate-mapping.svg` — Node.js module → Rust crate → binary deployment mapping
-- `deployment-topology.svg` — Edge device network topology (generic ARM edge, cloud backend)
+- `deployment-topology.svg` — Rust topology: cloud above, edge device in the middle, field hardware below
 - `staged-rollout-timeline.svg` — Stage 0–4 deployment timeline with go/no-go gates
 
 ## Key Takeaways
@@ -106,6 +107,7 @@ aurora-edge-gateway-design/
 │       └── 0007-port-marker-convention.md
 └── diagrams/
     ├── context-diagram.svg / .png
+    ├── before-topology.svg / .png
     ├── module-crate-mapping.svg / .png
     ├── deployment-topology.svg / .png
     └── staged-rollout-timeline.svg / .png

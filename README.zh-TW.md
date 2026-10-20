@@ -43,8 +43,9 @@
 #### 視覺圖表
 位於 `/diagrams/`：
 - `context-diagram.svg` — C4 風格的上下文圖，展示 Aurora Edge Gateway 與外部依賴
+- `before-topology.svg` — Node.js 基線拓樸（進程管理器、16 服務分 8 個啟動階段）
 - `module-crate-mapping.svg` — Node.js 模組 → Rust crate → 二進位部署對照
-- `deployment-topology.svg` — 邊緣設備網路拓樸（通用 ARM 邊緣、雲端後端）
+- `deployment-topology.svg` — Rust 拓樸：雲端在上、邊緣設備居中、現場硬體在下
 - `staged-rollout-timeline.svg` — Stage 0–4 部署時間軸與 go/no-go 閘門
 
 ## 核心要點
@@ -107,6 +108,7 @@ aurora-edge-gateway-design/
 │       └── 0007-port-marker-convention.zh-TW.md
 └── diagrams/
     ├── context-diagram.svg / .png
+    ├── before-topology.svg / .png
     ├── module-crate-mapping.svg / .png
     ├── deployment-topology.svg / .png
     └── staged-rollout-timeline.svg / .png

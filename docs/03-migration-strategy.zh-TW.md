@@ -138,7 +138,9 @@
 ### 哲學
 遞增式部署搭配自動化安全閘門；每個階段可在 < 1 分鐘內回滾。
 
-見 `../diagrams/staged-rollout-timeline.svg` 以取得視覺時間軸。
+![Stage 0 至 Stage 4 推出時間軸](../diagrams/staged-rollout-timeline.png)
+
+<sub>向量原檔: [`staged-rollout-timeline.svg`](../diagrams/staged-rollout-timeline.svg)</sub>
 
 ---
 
