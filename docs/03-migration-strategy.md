@@ -105,11 +105,12 @@ Target metrics from Problem Statement:
 
 | Metric | Phase A (Baseline) | Phase B (Target) | Method |
 |---|---|---|---|
-| Avg event latency | 8 ms (already better) | < 2 ms | Batch MQTT reads; zero-copy buffers |
-| 95th-percentile latency | 35 ms | < 10 ms | Priority queue for sensor events |
-| Memory (idle) | 28 MB | 25 MB | Reduce allocation overhead |
-| Memory growth (per day) | 0.05% | < 0.01% | Audit drop trait; verify all resources freed |
-| CPU (peak) | 32% on 8-core ARM | 25% or less | Profile hot paths; reduce context switches |
+| **CPU (3h active)** | ~60% avg | 50–65% avg, stable | Eliminate GC contention; profile hot paths |
+| **Memory (idle)** | < 1400 MB | < 1350 MB | Reduce allocation overhead |
+| **Memory (active, 3h)** | < 1500 MB | < 1500 MB sustained | Verify no GC-induced bloat; audit drop trait |
+| **Memory growth (per day)** | < 0.1% | < 0.01% | Ensure deterministic cleanup |
+| **Load average (4-core)** | 3.3 avg | 3.0–3.5 avg | Maintain headroom; no GC pauses |
+| **GC pauses** | 0 (expected) | 0 (verified) | Confirm no unexpected allocations |
 
 #### 3. Hardening & Reliability
 - **Error handling**: Replace panics with graceful degradation (retry, fallback, alerting)
@@ -125,8 +126,9 @@ Target metrics from Problem Statement:
 
 ### Phase B Success Criteria
 - ✓ All `TODO(port)` and `FIXME(port)` markers resolved or reclassified
-- ✓ Performance targets met (latency < 10ms@95th, memory < 25MB idle, < 0.01% growth/day)
+- ✓ Performance targets met (CPU 50–65% avg, Memory < 1500 MB sustained, Growth < 0.01%/day)
 - ✓ 90-day continuous operation test passes without crashes or restarts
+- ✓ Load average stable (3.0–3.5 on 4-core, no GC-induced spikes)
 - ✓ Phase A golden-master parity maintained (no regressions)
 - ✓ Team fully trained and confident in Rust codebase
 

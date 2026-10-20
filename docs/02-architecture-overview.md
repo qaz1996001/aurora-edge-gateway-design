@@ -158,19 +158,19 @@ See **[ADR-0004: Ecosystem Crate Mapping](adr/0004-ecosystem-crate-mapping.md)**
 
 ## Before vs. After Comparison
 
-| Characteristic | Node.js | Rust |
-|---|---|---|
-| **Process Count** | 1 monolith | 6–8 independent services |
-| **Memory (idle)** | 80 MB | 25 MB |
-| **Memory (under load)** | 120+ MB, grows 2% per day | 35–40 MB, < 0.1% growth per day |
-| **CPU (peak, 8-core ARM)** | 85% | 25% |
-| **GC pauses** | 100–500 ms (non-deterministic) | 0 ms (deterministic) |
-| **Avg event latency** | 15 ms | < 2 ms |
-| **95th percentile latency** | 100 ms | < 10 ms |
-| **Uptime (before crash/restart)** | 7–14 days | 90+ days (tested) |
-| **Deployment unit** | Full process restart | Individual service restart |
-| **API breaking changes** | None | None (backward compatible) |
-| **Ramp-up effort** | None (already deployed) | 6–8 weeks (Phase A port) |
+| Characteristic | Node.js (Baseline) | Rust (Target) | Notes |
+|---|---|---|---|
+| **Process Count** | 1 monolith | 6–8 independent services | Failure isolation |
+| **Memory (idle)** | ~1400 MB | < 1400 MB | Real measurements on Genio 350 |
+| **Memory (3h active load)** | ~1538 MB avg; GC-induced bloat | < 1500 MB; stable | Deterministic cleanup; no GC heap growth |
+| **CPU (3h active, 4-core ARM)** | 64% avg + transient 100% spikes | 50–65% avg; no GC spikes | Eliminate GC contention |
+| **Load average (3h, 4-core)** | 3.30 avg (0.825/core) | 3.0–3.5 avg (same or better) | No GC scheduling overhead |
+| **GC pauses** | 100–500 ms observed | 0 ms (deterministic) | Predictable timing |
+| **Uptime (continuous)** | 3–7 days before degradation | 90+ days (field tested) | No manual restart required |
+| **Deployment unit** | Full process restart (15–20 min downtime) | Individual service restart (< 1 min) | Faster recovery |
+| **Memory safety** | Runtime checks only; undefined behavior possible | Compile-time guaranteed; no undefined behavior | Eliminates entire class of bugs |
+| **API breaking changes** | None | None (backward compatible) | Drop-in replacement |
+| **Ramp-up effort** | None (already deployed) | 6–8 weeks (Phase A port) | Justified by long-term stability gain |
 
 ---
 

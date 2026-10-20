@@ -12,54 +12,55 @@ This document outlines the business and technical rationale for a comprehensive 
 
 ## Problem: The Node.js Bottleneck
 
-### Symptom 1: Memory Leaks Under Continuous Load
-- **Observation**: Edge gateways deployed in the field exhibited ~2% memory growth per day under normal operation
-- **Impact**: A 256 MB device would become unstable after ~7 days; required manual restart
-- **Root cause**: Circular references in event-stream aggregation loops; garbage collection pauses did not fully reclaim memory
-- **Attempted fixes**: Switched GC strategies, added manual cleanup code → temporary relief, but fundamental issue remained
-
-### Symptom 2: Tail Latency Spikes During Peak Load
-- **Observation**: 95th-percentile event processing latency: **85–120 ms** (target: < 10 ms)
-- **Impact**: Real-time sensor-driven triggers (e.g., equipment alarm thresholds) missed tight response deadlines
+### Symptom 1: Memory Pressure Under Continuous Load
+- **Observation**: Edge gateways exhibit memory growth over days; occasional GC-induced pauses cause latency spikes
+- **Impact**: System degradation after 3–7 days; manual restart required to restore performance
 - **Root cause**: 
-  - Node.js event loop contention during high-concurrency MQTT message bursts
-  - V8 JIT compilation overhead on first-run code paths
-  - Garbage collection pauses (100–500 ms) blocking sensor reads
-- **Attempted fixes**: Worker threads, clustering, async/await refactoring → partial improvement, but architectural limit reached
+  - Node.js garbage collection (100–500 ms pauses observed in testing)
+  - Circular references in event-stream aggregation; GC doesn't fully reclaim memory
+- **Production baseline**: ~1400 MB idle, ~1500–1600 MB under 3h active load on Genio 350 (4GB nominal, 2.84GB usable)
 
-### Symptom 3: Unexplained Process Crashes
-- **Observation**: Gateways crash without logs after 7–14 days of continuous load
-- **Root cause**: Likely stack overflow in deeply nested async call chains; difficult to diagnose in production
-- **Impact**: 15–20 minute downtime per incident; loss of buffered sensor data
+### Symptom 2: CPU Utilization & Load Variability
+- **Observation**: 
+  - Idle CPU: ~50–55%
+  - Active CPU (3h test): ~64% average, occasional spikes to 100%
+  - Load average: 3.3 on 4-core ARM (0.825/core); GC events cause transient load peaks
+- **Impact**: Limited headroom for concurrent sensor processing; unpredictable response times during GC pauses
+- **Root cause**: Node.js event loop + V8 JIT overhead + garbage collection timing unpredictable
+
+### Symptom 3: Non-Deterministic Behavior
+- **Observation**: GC pauses and event-loop scheduling make timing unpredictable
+- **Impact**: Hard to diagnose performance issues; no compile-time safety guarantees
+- **Root cause**: Dynamic runtime, implicit memory management, JavaScript semantics
 
 ## Business Goals
 
 ### Primary Objectives
-1. **Eliminate Memory Leaks**: Achieve zero unplanned restarts due to memory pressure over 30-day continuous operation
-2. **Reduce Latency Tail**: 95th-percentile event processing latency < 10 ms, even during peak sensor bursts
-3. **Improve Operational Stability**: Support 90+ day continuous uptime without manual intervention
+1. **Eliminate Memory Bloat**: Achieve stable memory footprint over 30-day continuous operation (current: ~1500 MB under load; target: maintain < 1500 MB with no GC-induced growth)
+2. **Reduce CPU Variability**: Deterministic CPU usage without GC pauses (current: 64% average + transient 100% spikes; target: consistent 50–65% with < 5% variability)
+3. **Improve Operational Stability**: Support 90+ day continuous uptime without manual restart; no cascading failures from GC pauses
 
 ### Secondary Objectives
-1. **Reduce CPU Footprint**: Lower power consumption on edge devices (relevant for battery-backed or thermally constrained deployments)
-2. **Simplify Debugging**: Deterministic behavior and compile-time checking reduce production incidents
-3. **Enable Future Scale**: Prepare architecture for 10x sensor count growth without redesign
+1. **Compile-Time Safety**: Eliminate memory-safety bugs (buffer overflow, use-after-free, data races) via language guarantees
+2. **Predictable Performance**: No stop-the-world pauses; all resource cleanup deterministic (no garbage collection timing)
+3. **Enable Future Scale**: Prepare architecture for 10x sensor count without increasing per-device resource footprint
 
 ## Technical Goals
 
 ### Correctness & Safety
 - **Memory safety**: Eliminate buffer overflows, use-after-free, and data races via Rust's type system
-- **Determinism**: No undefined behavior; all control flow and resource management explicit
+- **Determinism**: No GC pauses; all resource cleanup explicit (deterministic drop semantics)
 - **Behavioral parity**: New system must handle 100% of use cases of the old system (no silent feature loss)
 
-### Performance Targets
-| Metric | Node.js (Baseline) | Rust (Target) | Improvement |
+### Performance Targets (Based on Real Measurements)
+| Metric | Node.js (Baseline) | Rust (Target) | Notes |
 |---|---|---|---|
-| Avg event latency | 15 ms | < 2 ms | 7.5× |
-| 95th-percentile latency | 100 ms | < 10 ms | 10× |
-| Memory footprint | 80 MB (idle) | 25 MB (idle) | 3.2× |
-| RSS growth (per day, under load) | ~2% | < 0.1% | 20× |
-| Max GC pause | 500 ms | 0 ms (deterministic) | Unbounded |
-| CPU usage (peak) | 85% on 8-core ARM | 25% on 8-core ARM | 3.4× |
+| **CPU usage (3h active load)** | 64.1% avg on 4-core A53 | Maintain 50–65% avg | Eliminate transient 100% GC spikes |
+| **Memory (idle)** | ~1400 MB | < 1400 MB | Tighter baseline |
+| **Memory (3h active)** | ~1538 MB avg, growth stable | < 1500 MB, strictly stable | No GC-induced heap bloat |
+| **Load average (3h)** | 3.30 (0.825/core headroom) | Maintain 3.0–3.5 (18% headroom) | Deterministic; no GC contention |
+| **GC pauses** | 100–500 ms observed | 0 ms | Deterministic cleanup only |
+| **Uptime (continuous)** | 3–7 days before degradation | 90+ days stable | No manual restart required |
 
 ### Deployment & Operations
 - Support incremental rollout (Stage 0–4) with automatic rollback
@@ -119,12 +120,14 @@ This document outlines the business and technical rationale for a comprehensive 
 - ✓ 100% functional parity with Node.js (all routes, MQTT topics, data formats)
 - ✓ Behavioral equivalence validated via golden-master tests on 3+ weeks of production traffic replays
 - ✓ No new customer-facing bugs introduced
+- ✓ Memory footprint stable (idle: < 1400 MB; active: < 1500 MB after warm-up)
 
 ### Phase B (Hardening & Optimization)
-- ✓ Memory growth < 0.1% per day under continuous load over 30 days
-- ✓ 95th-percentile event latency < 10 ms on full production workload
+- ✓ CPU usage stable: 50–65% average on 3h active load (no transient 100% GC spikes)
+- ✓ Memory growth rate < 0.01% per day over 30-day continuous operation
 - ✓ Zero unplanned restarts over 90-day field trial
-- ✓ CPU usage reduced by ≥ 50% vs. baseline at same throughput
+- ✓ Load average < 1/core (headroom maintained); GC pauses eliminated (0 ms)
+- ✓ Deterministic timing: no latency variance from garbage collection
 
 ### Operational
 - ✓ Staged rollout completes without customer-blocking incidents
@@ -138,9 +141,9 @@ This document outlines the business and technical rationale for a comprehensive 
 - **Out**: Web UI frontend (stays Node.js for now), ML inference backend (stays Python)
 
 ### Estimated Timeline
-- **Phase A (Faithful Port)**: 6–8 weeks (module-by-module port + golden-master testing)
-- **Phase B (Hardening)**: 3–4 weeks (optimization, load testing, long-soak validation)
-- **Staged Rollout**: 2–4 weeks (Stage 0 → 4, automated tests, customer validation)
+- **Phase A (Faithful Port)**: 6–8 weeks (module-by-module port + golden-master testing + memory/CPU profiling)
+- **Phase B (Stabilization)**: 3–4 weeks (soak testing, GC/memory behavior validation, determinism verification)
+- **Staged Rollout**: 2–4 weeks (Stage 0 → 4, performance monitoring, customer validation)
 - **Total**: 3–4 months end-to-end
 
 ## Next Steps
