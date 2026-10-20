@@ -79,7 +79,7 @@ This is a static design portfolio. For feedback, questions, or discussions about
 ---
 
 **Last Updated**: 2026-10-20  
-**Format**: Markdown + ASCII diagrams + Architecture Decision Records (ADR)  
+**Format**: Markdown + ASCII diagrams inline + SVG/PNG diagrams in `/diagrams/` + Architecture Decision Records (ADR)  
 **Audience**: Technical decision-makers, architects, engineering leads
 
 ---

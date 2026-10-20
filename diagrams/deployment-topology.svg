@@ -1,0 +1,134 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 700" width="960" height="700" data-generator="fireworks-tech-graph" data-schema-version="1" data-text-metrics="heuristic-v1" data-style-id="1" data-visual-theme="Flat Icon" data-diagram-type="architecture" data-motion-scene="" data-semantic-profile="generic" data-semantic-valid="true" data-quality-profile="showcase" data-max-bends-per-edge="2" data-max-total-bends="8" data-max-route-stretch="1.35" data-max-bridged-crossings="0" data-min-node-gap="40.0" data-min-container-gutter="20.0" data-min-label-clearance="4.0" data-min-segment-length="16.0">
+  <defs>
+    <marker id="arrowA" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#7c3aed"/>
+    </marker>
+    <marker id="arrowB" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#10b981"/>
+    </marker>
+    <marker id="arrowC" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563eb"/>
+    </marker>
+    <marker id="arrowE" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#f97316"/>
+    </marker>
+    <marker id="arrowF" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#7c3aed"/>
+    </marker>
+    <marker id="arrowG" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#ef4444"/>
+    </marker>
+    <marker id="arrowH" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#6b7280"/>
+    </marker>
+    <filter id="shadowSoft" x="-20%" y="-20%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="3" stdDeviation="6" flood-color="#0f172a" flood-opacity="0.12"/>
+    </filter>
+    <filter id="shadowGlass" x="-20%" y="-20%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="10" stdDeviation="16" flood-color="#020617" flood-opacity="0.28"/>
+    </filter>
+    <style>
+    text { font-family: 'Helvetica Neue', Helvetica, Arial, 'PingFang SC', 'Noto Sans CJK SC', 'Microsoft YaHei', 'Microsoft JhengHei', 'SimHei', sans-serif; }
+    .title { font-size: 30px; font-weight: 700; fill: #111827; }
+    .subtitle { font-size: 14px; font-weight: 500; fill: #6b7280; }
+    .section { font-size: 13px; font-weight: 700; fill: #2563eb; letter-spacing: 1.4px; }
+    .section-sub { font-size: 12px; font-weight: 500; fill: #64748b; }
+    .node-title { font-weight: 700; fill: #111827; }
+    .node-sub { font-weight: 500; fill: #6b7280; }
+    .node-type { font-size: 12px; font-weight: 700; fill: #64748b; letter-spacing: 0.08em; }
+    .arrow-label { font-size: 12px; font-weight: 600; fill: #6b7280; }
+    .legend { font-size: 12px; font-weight: 500; fill: #6b7280; }
+    .footnote { font-size: 12px; font-weight: 500; fill: #64748b; }
+    .metric-label { font-size: 8.5px; font-weight: 700; fill: #64748b; text-transform: uppercase; }
+    .metric-value { font-size: 9.5px; font-weight: 700; fill: #111827; }
+    </style>
+  </defs>
+  <rect data-graph-role="background" width="960.0" height="700.0" fill="#ffffff"/>
+  <text x="480.0" y="56" text-anchor="middle" class="title">Deployment Topology</text>
+  <text x="480.0" y="82" text-anchor="middle" class="subtitle">4-core ARM Cortex-A53 · ~2.84 GB OS-usable · 206 MB resident full stack</text>
+  <g id="cloud" data-graph-role="container" data-container-id="cloud" data-semantic-role="boundary" data-graph-bounds="40,110,920,226">
+  <rect data-graph-role="container" x="40.0" y="110.0" width="880.0" height="116.0" rx="16.0" fill="none" stroke="#dbe5f1" stroke-width="1.4" stroke-dasharray="6 5"/>
+  <text x="58.0" y="134.0" class="section">01 // CLOUD BACKEND</text>
+    <rect id="cloud-header" data-graph-role="reserved" data-reserved-kind="container-header" x="48" y="116" width="164.68" height="30" fill="none" stroke="none"/>
+  </g>
+  <g id="edge" data-graph-role="container" data-container-id="edge" data-semantic-role="boundary" data-graph-bounds="40,276,920,392">
+  <rect data-graph-role="container" x="40.0" y="276.0" width="880.0" height="116.0" rx="16.0" fill="none" stroke="#dbe5f1" stroke-width="1.4" stroke-dasharray="6 5"/>
+  <text x="58.0" y="300.0" class="section">02 // EDGE DEVICE</text>
+    <rect id="edge-header" data-graph-role="reserved" data-reserved-kind="container-header" x="48" y="282" width="146.22" height="30" fill="none" stroke="none"/>
+  </g>
+  <g id="field" data-graph-role="container" data-container-id="field" data-semantic-role="boundary" data-graph-bounds="40,442,920,558">
+  <rect data-graph-role="container" x="40.0" y="442.0" width="880.0" height="116.0" rx="16.0" fill="none" stroke="#dbe5f1" stroke-width="1.4" stroke-dasharray="6 5"/>
+  <text x="58.0" y="466.0" class="section">03 // FIELD HARDWARE</text>
+    <rect id="field-header" data-graph-role="reserved" data-reserved-kind="container-header" x="48" y="448" width="171.96" height="30" fill="none" stroke="none"/>
+  </g>
+  <path id="uplink-rest" data-graph-role="edge" data-edge-id="uplink-rest" data-source="supervisor" data-target="rest_ep" data-edge-kind="flow" data-topic-id="" data-flow="data" data-motion-role="" data-motion-stage="" data-motion-order="" data-protocol="" data-via="" data-critical-path-id="" data-critical-hop="" data-critical-hops="" data-critical="false" data-bends="0" data-route-stretch="1.0" data-bridges="" d="M 290,312 L 290,200" fill="none" stroke="#f97316" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowE)"/>
+  <path id="uplink-mqtt" data-graph-role="edge" data-edge-id="uplink-mqtt" data-source="bus" data-target="mqtt_ep" data-edge-kind="flow" data-topic-id="" data-flow="feedback" data-motion-role="" data-motion-stage="" data-motion-order="" data-protocol="" data-via="" data-critical-path-id="" data-critical-hop="" data-critical-hops="" data-critical="false" data-bends="0" data-route-stretch="1.0" data-bridges="" d="M 670,312 L 670,200" fill="none" stroke="#ef4444" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowG)"/>
+  <path id="bus-io" data-graph-role="edge" data-edge-id="bus-io" data-source="supervisor" data-target="bus" data-edge-kind="flow" data-topic-id="" data-flow="control" data-motion-role="" data-motion-stage="" data-motion-order="" data-protocol="" data-via="" data-critical-path-id="" data-critical-hop="" data-critical-hops="" data-critical="false" data-bends="0" data-route-stretch="1.0" data-bridges="" d="M 420,339 L 540,339" fill="none" stroke="#7c3aed" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowA)"/>
+  <path id="acquire" data-graph-role="edge" data-edge-id="acquire" data-source="sensors" data-target="supervisor" data-edge-kind="flow" data-topic-id="" data-flow="read" data-motion-role="" data-motion-stage="" data-motion-order="" data-protocol="" data-via="" data-critical-path-id="" data-critical-hop="" data-critical-hops="" data-critical="false" data-bends="0" data-route-stretch="1.0" data-bridges="" d="M 290,478 L 290,366" fill="none" stroke="#2563eb" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowC)"/>
+  <path id="lamp" data-graph-role="edge" data-edge-id="lamp" data-source="bus" data-target="beacon" data-edge-kind="flow" data-topic-id="" data-flow="control" data-motion-role="" data-motion-stage="" data-motion-order="" data-protocol="" data-via="" data-critical-path-id="" data-critical-hop="" data-critical-hops="" data-critical="false" data-bends="0" data-route-stretch="1.0" data-bridges="" d="M 670,366 L 670,478" fill="none" stroke="#7c3aed" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowA)"/>
+  <g id="node-rest_ep" data-graph-role="node" data-node-id="rest_ep" data-semantic-role="rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="160,146,420,200">
+  <rect x="160.0" y="146.0" width="260.0" height="54.0" rx="10.0" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.8"/>
+  <text data-text-role="title" data-full-text="REST Ingestion" data-text-max-width="236.0" x="290.0" y="173.0" text-anchor="middle" class="node-title" font-size="18">REST Ingestion</text>
+  <text data-text-role="subtitle" data-full-text="heartbeat + batch sync" data-text-max-width="236.0" x="290.0" y="195.0" text-anchor="middle" class="node-sub" font-size="12">heartbeat + batch sync</text>
+  </g>
+  <g id="node-mqtt_ep" data-graph-role="node" data-node-id="mqtt_ep" data-semantic-role="hexagon" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="540,146,800,200">
+  <path d="M 562.0 146.0 L 778.0 146.0 L 800.0 173.0 L 778.0 200.0 L 562.0 200.0 L 540.0 173.0 Z" fill="#fff7ed" stroke="#f97316" stroke-width="2.0"/>
+  <text data-text-role="title" data-full-text="MQTT Uplink (optional)" data-text-max-width="208.0" x="670.0" y="173.0" text-anchor="middle" class="node-title" font-size="16.71">MQTT Uplink (optional)</text>
+  <text data-text-role="subtitle" data-full-text="factory-disabled by default" data-text-max-width="208.0" x="670.0" y="195.0" text-anchor="middle" class="node-sub" font-size="12">factory-disabled by default</text>
+  </g>
+  <g id="node-supervisor" data-graph-role="node" data-node-id="supervisor" data-semantic-role="double_rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="160,312,420,366">
+  <rect x="160.0" y="312.0" width="260.0" height="54.0" rx="10.0" fill="#faf5ff" stroke="#8b5cf6" stroke-width="2.0"/>
+  <rect x="166.0" y="318.0" width="248.0" height="42.0" rx="7.0" fill="none" stroke="#8b5cf6" stroke-width="1.2" opacity="0.65"/>
+  <text data-text-role="title" data-full-text="aeg-supervisor" data-text-max-width="228.0" x="290.0" y="339.0" text-anchor="middle" class="node-title" font-size="18">aeg-supervisor</text>
+  <text data-text-role="subtitle" data-full-text="1 systemd unit · 14 child services" data-text-max-width="228.0" x="290.0" y="361.0" text-anchor="middle" class="node-sub" font-size="12">1 systemd unit · 14 child services</text>
+  </g>
+  <g id="node-bus" data-graph-role="node" data-node-id="bus" data-semantic-role="hexagon" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="540,312,800,366">
+  <path d="M 562.0 312.0 L 778.0 312.0 L 800.0 339.0 L 778.0 366.0 L 562.0 366.0 L 540.0 339.0 Z" fill="#f0fdfa" stroke="#14b8a6" stroke-width="2.0"/>
+  <text data-text-role="title" data-full-text="Internal Message Bus" data-text-max-width="208.0" x="670.0" y="339.0" text-anchor="middle" class="node-title" font-size="17.7">Internal Message Bus</text>
+  <text data-text-role="subtitle" data-full-text="local pub/sub between services" data-text-max-width="208.0" x="670.0" y="361.0" text-anchor="middle" class="node-sub" font-size="12">local pub/sub between services</text>
+  </g>
+  <g id="node-sensors" data-graph-role="node" data-node-id="sensors" data-semantic-role="rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="160,478,420,532">
+  <rect x="160.0" y="478.0" width="260.0" height="54.0" rx="10.0" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.8"/>
+  <text data-text-role="title" data-full-text="Industrial Sensors" data-text-max-width="236.0" x="290.0" y="505.0" text-anchor="middle" class="node-title" font-size="18">Industrial Sensors</text>
+  <text data-text-role="subtitle" data-full-text="USB Audio · RS-485 · USB serial" data-text-max-width="236.0" x="290.0" y="527.0" text-anchor="middle" class="node-sub" font-size="12">USB Audio · RS-485 · USB serial</text>
+  </g>
+  <g id="node-beacon" data-graph-role="node" data-node-id="beacon" data-semantic-role="rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="540,478,800,532">
+  <rect x="540.0" y="478.0" width="260.0" height="54.0" rx="10.0" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.8"/>
+  <text data-text-role="title" data-full-text="Beacon / Indicator" data-text-max-width="236.0" x="670.0" y="505.0" text-anchor="middle" class="node-title" font-size="18">Beacon / Indicator</text>
+  <text data-text-role="subtitle" data-full-text="USB serial, 9600 8N1" data-text-max-width="236.0" x="670.0" y="527.0" text-anchor="middle" class="node-sub" font-size="12">USB serial, 9600 8N1</text>
+  </g>
+  <g id="uplink-rest-label" data-graph-role="label" data-owner="uplink-rest" data-graph-bounds="187.56,242,287,262">
+  <rect x="187.56" y="242.0" width="99.44000000000001" height="20" rx="6" fill="#ffffff" opacity="0.94"/>
+  <text x="237.28" y="256.0" text-anchor="middle" class="arrow-label">primary uplink</text>
+  </g>
+  <g id="uplink-mqtt-label" data-graph-role="label" data-owner="uplink-mqtt" data-graph-bounds="524.6,242,667,262">
+  <rect x="524.6" y="242.0" width="142.4" height="20" rx="6" fill="#ffffff" opacity="0.94"/>
+  <text x="595.8" y="256.0" text-anchor="middle" class="arrow-label">optional cloud bridge</text>
+  </g>
+  <g id="bus-io-label" data-graph-role="label" data-owner="bus-io" data-graph-bounds="414.2,285,545.8,305">
+  <rect x="414.2" y="285.0" width="131.60000000000002" height="20" rx="6" fill="#ffffff" opacity="0.94"/>
+  <text x="480.0" y="299.0" text-anchor="middle" class="arrow-label">publish / subscribe</text>
+  </g>
+  <g id="acquire-label" data-graph-role="label" data-owner="acquire" data-graph-bounds="205.8,408,287,428">
+  <rect x="205.8" y="408.0" width="81.19999999999999" height="20" rx="6" fill="#ffffff" opacity="0.94"/>
+  <text x="246.4" y="422.0" text-anchor="middle" class="arrow-label">acquisition</text>
+  </g>
+  <g id="lamp-label" data-graph-role="label" data-owner="lamp" data-graph-bounds="589.16,408,667,428">
+  <rect x="589.16" y="408.0" width="77.84" height="20" rx="6" fill="#ffffff" opacity="0.94"/>
+  <text x="628.08" y="422.0" text-anchor="middle" class="arrow-label">lamp state</text>
+  </g>
+  <g id="legend" data-graph-role="legend">
+    <rect id="legend-zone" data-graph-role="reserved" data-reserved-kind="legend" x="38" y="572" width="604.96" height="46" rx="10" fill="none" stroke="none"/>
+    <line data-graph-role="decoration" x1="48.0" y1="586.0" x2="78.0" y2="586.0" stroke="#2563eb" stroke-width="2.4" marker-end="url(#arrowC)"/>
+    <text data-graph-role="decoration" x="88.0" y="590.0" class="legend">sensor input</text>
+    <line data-graph-role="decoration" x1="193.76" y1="586.0" x2="223.76" y2="586.0" stroke="#7c3aed" stroke-width="2.4" marker-end="url(#arrowA)"/>
+    <text data-graph-role="decoration" x="233.76" y="590.0" class="legend">local control</text>
+    <line data-graph-role="decoration" x1="340.24" y1="586.0" x2="370.24" y2="586.0" stroke="#f97316" stroke-width="2.4" marker-end="url(#arrowE)"/>
+    <text data-graph-role="decoration" x="380.24" y="590.0" class="legend">primary uplink</text>
+    <line data-graph-role="decoration" x1="493.68" y1="586.0" x2="523.6800000000001" y2="586.0" stroke="#ef4444" stroke-width="2.4" marker-end="url(#arrowG)"/>
+    <text data-graph-role="decoration" x="533.6800000000001" y="590.0" class="legend">optional uplink</text>
+  </g>
+  <g id="footer" data-graph-role="reserved" data-graph-bounds="48,670,734,686">
+  <text x="48.0" y="682.0" class="footnote">MQTT is the on-device service bus; the cloud uplink is REST unless the optional bridge is enabled.</text>
+  </g>
+</svg>

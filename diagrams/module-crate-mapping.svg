@@ -1,0 +1,160 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 1080" width="960" height="1080" data-generator="fireworks-tech-graph" data-schema-version="1" data-text-metrics="heuristic-v1" data-style-id="1" data-visual-theme="Flat Icon" data-diagram-type="architecture" data-motion-scene="" data-semantic-profile="generic" data-semantic-valid="true" data-quality-profile="showcase" data-max-bends-per-edge="2" data-max-total-bends="8" data-max-route-stretch="1.35" data-max-bridged-crossings="0" data-min-node-gap="40.0" data-min-container-gutter="20.0" data-min-label-clearance="4.0" data-min-segment-length="16.0">
+  <defs>
+    <marker id="arrowA" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#7c3aed"/>
+    </marker>
+    <marker id="arrowB" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#10b981"/>
+    </marker>
+    <marker id="arrowC" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563eb"/>
+    </marker>
+    <marker id="arrowE" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#f97316"/>
+    </marker>
+    <marker id="arrowF" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#7c3aed"/>
+    </marker>
+    <marker id="arrowG" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#ef4444"/>
+    </marker>
+    <marker id="arrowH" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#6b7280"/>
+    </marker>
+    <filter id="shadowSoft" x="-20%" y="-20%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="3" stdDeviation="6" flood-color="#0f172a" flood-opacity="0.12"/>
+    </filter>
+    <filter id="shadowGlass" x="-20%" y="-20%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="10" stdDeviation="16" flood-color="#020617" flood-opacity="0.28"/>
+    </filter>
+    <style>
+    text { font-family: 'Helvetica Neue', Helvetica, Arial, 'PingFang SC', 'Noto Sans CJK SC', 'Microsoft YaHei', 'Microsoft JhengHei', 'SimHei', sans-serif; }
+    .title { font-size: 30px; font-weight: 700; fill: #111827; }
+    .subtitle { font-size: 14px; font-weight: 500; fill: #6b7280; }
+    .section { font-size: 13px; font-weight: 700; fill: #2563eb; letter-spacing: 1.4px; }
+    .section-sub { font-size: 12px; font-weight: 500; fill: #64748b; }
+    .node-title { font-weight: 700; fill: #111827; }
+    .node-sub { font-weight: 500; fill: #6b7280; }
+    .node-type { font-size: 12px; font-weight: 700; fill: #64748b; letter-spacing: 0.08em; }
+    .arrow-label { font-size: 12px; font-weight: 600; fill: #6b7280; }
+    .legend { font-size: 12px; font-weight: 500; fill: #6b7280; }
+    .footnote { font-size: 12px; font-weight: 500; fill: #64748b; }
+    .metric-label { font-size: 8.5px; font-weight: 700; fill: #64748b; text-transform: uppercase; }
+    .metric-value { font-size: 9.5px; font-weight: 700; fill: #111827; }
+    </style>
+  </defs>
+  <rect data-graph-role="background" width="960.0" height="1080.0" fill="#ffffff"/>
+  <text x="480.0" y="56" text-anchor="middle" class="title">Module → Crate → Binary Mapping</text>
+  <text x="480.0" y="82" text-anchor="middle" class="subtitle">how each Node.js service maps onto a Rust crate and its deployment form</text>
+  <g id="before" data-graph-role="container" data-container-id="before" data-semantic-role="boundary" data-graph-bounds="40,110,430,950">
+  <rect data-graph-role="container" x="40.0" y="110.0" width="390.0" height="840.0" rx="16.0" fill="none" stroke="#dbe5f1" stroke-width="1.4" stroke-dasharray="6 5"/>
+  <text x="58.0" y="134.0" class="section">01 // NODE.JS SERVICES</text>
+    <rect id="before-header" data-graph-role="reserved" data-reserved-kind="container-header" x="48" y="116" width="180.54" height="30" fill="none" stroke="none"/>
+  </g>
+  <g id="after" data-graph-role="container" data-container-id="after" data-semantic-role="boundary" data-graph-bounds="530,110,920,950">
+  <rect data-graph-role="container" x="530.0" y="110.0" width="390.0" height="840.0" rx="16.0" fill="none" stroke="#dbe5f1" stroke-width="1.4" stroke-dasharray="6 5"/>
+  <text x="548.0" y="134.0" class="section">02 // RUST CRATES</text>
+    <rect id="after-header" data-graph-role="reserved" data-reserved-kind="container-header" x="538" y="116" width="149.6" height="30" fill="none" stroke="none"/>
+  </g>
+  <path id="m_app" data-graph-role="edge" data-edge-id="m_app" data-source="n_app" data-target="r_app" data-edge-kind="flow" data-topic-id="" data-flow="data" data-motion-role="" data-motion-stage="" data-motion-order="" data-protocol="" data-via="" data-critical-path-id="" data-critical-hop="" data-critical-hops="" data-critical="false" data-bends="0" data-route-stretch="1.0" data-bridges="" d="M 400,180 L 560,180" fill="none" stroke="#f97316" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowE)"/>
+  <path id="m_mqtt" data-graph-role="edge" data-edge-id="m_mqtt" data-source="n_mqtt" data-target="r_mqtt" data-edge-kind="flow" data-topic-id="" data-flow="data" data-motion-role="" data-motion-stage="" data-motion-order="" data-protocol="" data-via="" data-critical-path-id="" data-critical-hop="" data-critical-hops="" data-critical="false" data-bends="0" data-route-stretch="1.0" data-bridges="" d="M 400,280 L 560,280" fill="none" stroke="#f97316" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowE)"/>
+  <path id="m_sens" data-graph-role="edge" data-edge-id="m_sens" data-source="n_sens" data-target="r_sens" data-edge-kind="flow" data-topic-id="" data-flow="data" data-motion-role="" data-motion-stage="" data-motion-order="" data-protocol="" data-via="" data-critical-path-id="" data-critical-hop="" data-critical-hops="" data-critical="false" data-bends="0" data-route-stretch="1.0" data-bridges="" d="M 400,380 L 560,380" fill="none" stroke="#f97316" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowE)"/>
+  <path id="m_beac" data-graph-role="edge" data-edge-id="m_beac" data-source="n_beac" data-target="r_beac" data-edge-kind="flow" data-topic-id="" data-flow="data" data-motion-role="" data-motion-stage="" data-motion-order="" data-protocol="" data-via="" data-critical-path-id="" data-critical-hop="" data-critical-hops="" data-critical="false" data-bends="0" data-route-stretch="1.0" data-bridges="" d="M 400,480 L 560,480" fill="none" stroke="#f97316" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowE)"/>
+  <path id="m_ota" data-graph-role="edge" data-edge-id="m_ota" data-source="n_ota" data-target="r_ota" data-edge-kind="flow" data-topic-id="" data-flow="data" data-motion-role="" data-motion-stage="" data-motion-order="" data-protocol="" data-via="" data-critical-path-id="" data-critical-hop="" data-critical-hops="" data-critical="false" data-bends="0" data-route-stretch="1.0" data-bridges="" d="M 400,580 L 560,580" fill="none" stroke="#f97316" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowE)"/>
+  <path id="m_met" data-graph-role="edge" data-edge-id="m_met" data-source="n_met" data-target="r_met" data-edge-kind="flow" data-topic-id="" data-flow="data" data-motion-role="" data-motion-stage="" data-motion-order="" data-protocol="" data-via="" data-critical-path-id="" data-critical-hop="" data-critical-hops="" data-critical="false" data-bends="0" data-route-stretch="1.0" data-bridges="" d="M 400,680 L 560,680" fill="none" stroke="#f97316" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowE)"/>
+  <path id="m_db" data-graph-role="edge" data-edge-id="m_db" data-source="n_db" data-target="r_db" data-edge-kind="flow" data-topic-id="" data-flow="data" data-motion-role="" data-motion-stage="" data-motion-order="" data-protocol="" data-via="" data-critical-path-id="" data-critical-hop="" data-critical-hops="" data-critical="false" data-bends="0" data-route-stretch="1.0" data-bridges="" d="M 400,780 L 560,780" fill="none" stroke="#f97316" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowE)"/>
+  <path id="m_py" data-graph-role="edge" data-edge-id="m_py" data-source="n_py" data-target="r_py" data-edge-kind="flow" data-topic-id="" data-flow="data" data-motion-role="" data-motion-stage="" data-motion-order="" data-protocol="" data-via="" data-critical-path-id="" data-critical-hop="" data-critical-hops="" data-critical="false" data-bends="0" data-route-stretch="1.0" data-bridges="" d="M 400,880 L 560,880" fill="none" stroke="#f97316" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowE)"/>
+  <g id="node-n_app" data-graph-role="node" data-node-id="n_app" data-semantic-role="rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="70,150,400,210">
+  <rect x="70.0" y="150.0" width="330.0" height="60.0" rx="10.0" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.8"/>
+  <text data-text-role="title" data-full-text="appserver" data-text-max-width="306.0" x="235.0" y="180.0" text-anchor="middle" class="node-title" font-size="18">appserver</text>
+  <text data-text-role="subtitle" data-full-text="Express routes" data-text-max-width="306.0" x="235.0" y="202.0" text-anchor="middle" class="node-sub" font-size="12">Express routes</text>
+  </g>
+  <g id="node-n_mqtt" data-graph-role="node" data-node-id="n_mqtt" data-semantic-role="rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="70,250,400,310">
+  <rect x="70.0" y="250.0" width="330.0" height="60.0" rx="10.0" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.8"/>
+  <text data-text-role="title" data-full-text="mqtt-client" data-text-max-width="306.0" x="235.0" y="280.0" text-anchor="middle" class="node-title" font-size="18">mqtt-client</text>
+  <text data-text-role="subtitle" data-full-text="service bus client" data-text-max-width="306.0" x="235.0" y="302.0" text-anchor="middle" class="node-sub" font-size="12">service bus client</text>
+  </g>
+  <g id="node-n_sens" data-graph-role="node" data-node-id="n_sens" data-semantic-role="rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="70,350,400,410">
+  <rect x="70.0" y="350.0" width="330.0" height="60.0" rx="10.0" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.8"/>
+  <text data-text-role="title" data-full-text="sensor-data" data-text-max-width="306.0" x="235.0" y="380.0" text-anchor="middle" class="node-title" font-size="18">sensor-data</text>
+  <text data-text-role="subtitle" data-full-text="acquisition + aggregation" data-text-max-width="306.0" x="235.0" y="402.0" text-anchor="middle" class="node-sub" font-size="12">acquisition + aggregation</text>
+  </g>
+  <g id="node-n_beac" data-graph-role="node" data-node-id="n_beac" data-semantic-role="rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="70,450,400,510">
+  <rect x="70.0" y="450.0" width="330.0" height="60.0" rx="10.0" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.8"/>
+  <text data-text-role="title" data-full-text="beacon-control" data-text-max-width="306.0" x="235.0" y="480.0" text-anchor="middle" class="node-title" font-size="18">beacon-control</text>
+  <text data-text-role="subtitle" data-full-text="serial port" data-text-max-width="306.0" x="235.0" y="502.0" text-anchor="middle" class="node-sub" font-size="12">serial port</text>
+  </g>
+  <g id="node-n_ota" data-graph-role="node" data-node-id="n_ota" data-semantic-role="rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="70,550,400,610">
+  <rect x="70.0" y="550.0" width="330.0" height="60.0" rx="10.0" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.8"/>
+  <text data-text-role="title" data-full-text="ota-updater" data-text-max-width="306.0" x="235.0" y="580.0" text-anchor="middle" class="node-title" font-size="18">ota-updater</text>
+  <text data-text-role="subtitle" data-full-text="firmware updates" data-text-max-width="306.0" x="235.0" y="602.0" text-anchor="middle" class="node-sub" font-size="12">firmware updates</text>
+  </g>
+  <g id="node-n_met" data-graph-role="node" data-node-id="n_met" data-semantic-role="rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="70,650,400,710">
+  <rect x="70.0" y="650.0" width="330.0" height="60.0" rx="10.0" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.8"/>
+  <text data-text-role="title" data-full-text="metrics-engine" data-text-max-width="306.0" x="235.0" y="680.0" text-anchor="middle" class="node-title" font-size="18">metrics-engine</text>
+  <text data-text-role="subtitle" data-full-text="signal RMS aggregation" data-text-max-width="306.0" x="235.0" y="702.0" text-anchor="middle" class="node-sub" font-size="12">signal RMS aggregation</text>
+  </g>
+  <g id="node-n_db" data-graph-role="node" data-node-id="n_db" data-semantic-role="rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="70,750,400,810">
+  <rect x="70.0" y="750.0" width="330.0" height="60.0" rx="10.0" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.8"/>
+  <text data-text-role="title" data-full-text="database" data-text-max-width="306.0" x="235.0" y="780.0" text-anchor="middle" class="node-title" font-size="18">database</text>
+  <text data-text-role="subtitle" data-full-text="SQLite access" data-text-max-width="306.0" x="235.0" y="802.0" text-anchor="middle" class="node-sub" font-size="12">SQLite access</text>
+  </g>
+  <g id="node-n_py" data-graph-role="node" data-node-id="n_py" data-semantic-role="rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="70,850,400,910">
+  <rect x="70.0" y="850.0" width="330.0" height="60.0" rx="10.0" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.8"/>
+  <text data-text-role="title" data-full-text="python-bridge" data-text-max-width="306.0" x="235.0" y="880.0" text-anchor="middle" class="node-title" font-size="18">python-bridge</text>
+  <text data-text-role="subtitle" data-full-text="DSP / ML handoff" data-text-max-width="306.0" x="235.0" y="902.0" text-anchor="middle" class="node-sub" font-size="12">DSP / ML handoff</text>
+  </g>
+  <g id="node-r_app" data-graph-role="node" data-node-id="r_app" data-semantic-role="double_rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="560,150,890,210">
+  <rect x="560.0" y="150.0" width="330.0" height="60.0" rx="10.0" fill="#faf5ff" stroke="#8b5cf6" stroke-width="2.0"/>
+  <rect x="566.0" y="156.0" width="318.0" height="48.0" rx="7.0" fill="none" stroke="#8b5cf6" stroke-width="1.2" opacity="0.65"/>
+  <text data-text-role="title" data-full-text="aeg-appserver" data-text-max-width="298.0" x="725.0" y="180.0" text-anchor="middle" class="node-title" font-size="18">aeg-appserver</text>
+  <text data-text-role="subtitle" data-full-text="supervised binary · axum, tokio" data-text-max-width="298.0" x="725.0" y="202.0" text-anchor="middle" class="node-sub" font-size="12">supervised binary · axum, tokio</text>
+  </g>
+  <g id="node-r_mqtt" data-graph-role="node" data-node-id="r_mqtt" data-semantic-role="rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="560,250,890,310">
+  <rect x="560.0" y="250.0" width="330.0" height="60.0" rx="10.0" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.8"/>
+  <text data-text-role="title" data-full-text="aeg-mqtt-client" data-text-max-width="306.0" x="725.0" y="280.0" text-anchor="middle" class="node-title" font-size="18">aeg-mqtt-client</text>
+  <text data-text-role="subtitle" data-full-text="shared lib · rumqttc" data-text-max-width="306.0" x="725.0" y="302.0" text-anchor="middle" class="node-sub" font-size="12">shared lib · rumqttc</text>
+  </g>
+  <g id="node-r_sens" data-graph-role="node" data-node-id="r_sens" data-semantic-role="double_rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="560,350,890,410">
+  <rect x="560.0" y="350.0" width="330.0" height="60.0" rx="10.0" fill="#faf5ff" stroke="#8b5cf6" stroke-width="2.0"/>
+  <rect x="566.0" y="356.0" width="318.0" height="48.0" rx="7.0" fill="none" stroke="#8b5cf6" stroke-width="1.2" opacity="0.65"/>
+  <text data-text-role="title" data-full-text="aeg-sensors" data-text-max-width="298.0" x="725.0" y="380.0" text-anchor="middle" class="node-title" font-size="18">aeg-sensors</text>
+  <text data-text-role="subtitle" data-full-text="supervised binary · tokio" data-text-max-width="298.0" x="725.0" y="402.0" text-anchor="middle" class="node-sub" font-size="12">supervised binary · tokio</text>
+  </g>
+  <g id="node-r_beac" data-graph-role="node" data-node-id="r_beac" data-semantic-role="double_rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="560,450,890,510">
+  <rect x="560.0" y="450.0" width="330.0" height="60.0" rx="10.0" fill="#faf5ff" stroke="#8b5cf6" stroke-width="2.0"/>
+  <rect x="566.0" y="456.0" width="318.0" height="48.0" rx="7.0" fill="none" stroke="#8b5cf6" stroke-width="1.2" opacity="0.65"/>
+  <text data-text-role="title" data-full-text="aeg-beacon" data-text-max-width="298.0" x="725.0" y="480.0" text-anchor="middle" class="node-title" font-size="18">aeg-beacon</text>
+  <text data-text-role="subtitle" data-full-text="supervised binary · tokio-serial" data-text-max-width="298.0" x="725.0" y="502.0" text-anchor="middle" class="node-sub" font-size="12">supervised binary · tokio-serial</text>
+  </g>
+  <g id="node-r_ota" data-graph-role="node" data-node-id="r_ota" data-semantic-role="double_rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="560,550,890,610">
+  <rect x="560.0" y="550.0" width="330.0" height="60.0" rx="10.0" fill="#faf5ff" stroke="#8b5cf6" stroke-width="2.0"/>
+  <rect x="566.0" y="556.0" width="318.0" height="48.0" rx="7.0" fill="none" stroke="#8b5cf6" stroke-width="1.2" opacity="0.65"/>
+  <text data-text-role="title" data-full-text="aeg-ota" data-text-max-width="298.0" x="725.0" y="580.0" text-anchor="middle" class="node-title" font-size="18">aeg-ota</text>
+  <text data-text-role="subtitle" data-full-text="supervised binary · sha2" data-text-max-width="298.0" x="725.0" y="602.0" text-anchor="middle" class="node-sub" font-size="12">supervised binary · sha2</text>
+  </g>
+  <g id="node-r_met" data-graph-role="node" data-node-id="r_met" data-semantic-role="double_rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="560,650,890,710">
+  <rect x="560.0" y="650.0" width="330.0" height="60.0" rx="10.0" fill="#faf5ff" stroke="#8b5cf6" stroke-width="2.0"/>
+  <rect x="566.0" y="656.0" width="318.0" height="48.0" rx="7.0" fill="none" stroke="#8b5cf6" stroke-width="1.2" opacity="0.65"/>
+  <text data-text-role="title" data-full-text="aeg-metrics" data-text-max-width="298.0" x="725.0" y="680.0" text-anchor="middle" class="node-title" font-size="18">aeg-metrics</text>
+  <text data-text-role="subtitle" data-full-text="supervised binary · aeg-sensors" data-text-max-width="298.0" x="725.0" y="702.0" text-anchor="middle" class="node-sub" font-size="12">supervised binary · aeg-sensors</text>
+  </g>
+  <g id="node-r_db" data-graph-role="node" data-node-id="r_db" data-semantic-role="rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="560,750,890,810">
+  <rect x="560.0" y="750.0" width="330.0" height="60.0" rx="10.0" fill="#ecfdf5" stroke="#10b981" stroke-width="1.8"/>
+  <text data-text-role="title" data-full-text="aeg-db" data-text-max-width="306.0" x="725.0" y="780.0" text-anchor="middle" class="node-title" font-size="18">aeg-db</text>
+  <text data-text-role="subtitle" data-full-text="shared lib · rusqlite" data-text-max-width="306.0" x="725.0" y="802.0" text-anchor="middle" class="node-sub" font-size="12">shared lib · rusqlite</text>
+  </g>
+  <g id="node-r_py" data-graph-role="node" data-node-id="r_py" data-semantic-role="rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="560,850,890,910">
+  <rect x="560.0" y="850.0" width="330.0" height="60.0" rx="10.0" fill="#f0fdfa" stroke="#14b8a6" stroke-width="1.8"/>
+  <text data-text-role="title" data-full-text="aeg-python-bridge" data-text-max-width="306.0" x="725.0" y="880.0" text-anchor="middle" class="node-title" font-size="18">aeg-python-bridge</text>
+  <text data-text-role="subtitle" data-full-text="IPC daemon · child process" data-text-max-width="306.0" x="725.0" y="902.0" text-anchor="middle" class="node-sub" font-size="12">IPC daemon · child process</text>
+  </g>
+  <g id="legend" data-graph-role="legend">
+    <rect id="legend-zone" data-graph-role="reserved" data-reserved-kind="legend" x="38" y="971" width="159.04" height="46" rx="10" fill="none" stroke="none"/>
+    <line data-graph-role="decoration" x1="48.0" y1="985.0" x2="78.0" y2="985.0" stroke="#f97316" stroke-width="2.4" marker-end="url(#arrowE)"/>
+    <text data-graph-role="decoration" x="88.0" y="989.0" class="legend">module → crate</text>
+  </g>
+  <g id="footer" data-graph-role="reserved" data-graph-bounds="48,1043,741,1059">
+  <text x="48.0" y="1055.0" class="footnote">Supervised binaries run as child processes of a single systemd unit; shared libs compile into them.</text>
+  </g>
+</svg>
