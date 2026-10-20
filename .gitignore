@@ -1,0 +1,35 @@
+# Build outputs
+target/
+*.rlib
+*.so
+*.dylib
+*.dSYM/
+*.su
+
+# IDE & Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.iml
+
+# Dependencies
+Cargo.lock
+node_modules/
+*.egg-info/
+
+# Test outputs
+test-results/
+.tarpaulin-report.html
+coverage/
+
+# Temporary files
+*.tmp
+*.log
+.env
+.env.local
+
+# Diagrams (source; keep SVG/PNG)
+*.mermaid.draft
