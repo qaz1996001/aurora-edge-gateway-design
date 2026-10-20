@@ -2,7 +2,7 @@
 
 ## Overview
 
-The migration from Node.js to Rust is executed in **two sequential phases**, followed by a carefully staged rollout with automated safety gates. This approach minimizes risk while maintaining behavioral compatibility.
+The migration from Node.js to Rust is executed as a **~22-week staged rollout (Stage 0–4)**, with binary rollback switches and manual SOPs at every stage (rollback completes within 5 minutes per stage). Phase A (Faithful Port) and Phase B (Harden & Optimize) are not separate time blocks bolted onto the front of this schedule — they are the two methodological lenses applied *within* the Stage 0–4 timeline: each module is first ported faithfully (Phase A) before the stage that deploys it goes live, and hardening/optimization work (Phase B) continues alongside later stages once parity is proven. This approach minimizes risk while maintaining behavioral compatibility.
 
 ### Two-Phase Philosophy
 
@@ -13,7 +13,7 @@ This separation of concerns is critical: mixing refactoring with porting introdu
 
 ---
 
-## Phase A: Faithful Port (Weeks 0–8)
+## Phase A: Faithful Port (Primarily Stage 0–2)
 
 ### Goal
 Achieve 100% **behavioral equivalence** with the Node.js baseline, verified via golden-master tests on production traffic replays.
@@ -38,7 +38,7 @@ Process modules in dependency order (Tier 0 → 4; see Architecture Overview):
 - Target: Same topic subscriptions; same message formats; same Python command-line arguments
 
 **Tier 3: Domain Logic**
-- `aeg-sensors`, `aeg-vrms`, `aeg-led`, `aeg-ota`
+- `aeg-sensors`, `aeg-metrics` (signal RMS aggregation), `aeg-led`, `aeg-ota`
 - Target: Exact same sensor-reading values; same LED color/brightness; same OTA logic
 
 **Tier 4: Public Interfaces**
@@ -84,7 +84,7 @@ Every module flagged during code review has an assigned risk level:
 
 ---
 
-## Phase B: Harden & Optimize (Weeks 8–12)
+## Phase B: Harden & Optimize (Primarily Stage 2–4)
 
 ### Goal
 Fix known bugs, optimize performance, and improve reliability. All changes validated against Phase A baseline to prevent regression.
@@ -103,14 +103,14 @@ Fix known bugs, optimize performance, and improve reliability. All changes valid
 #### 2. Performance Optimization
 Target metrics from Problem Statement:
 
-| Metric | Phase A (Baseline) | Phase B (Target) | Method |
+| Metric | Phase A (Node.js baseline, 4-core ARM Cortex-A53, 3h active load) | Phase B (Rust, measured on 7.8h soak, same hardware) | Method |
 |---|---|---|---|
-| **CPU (3h active)** | ~60% avg | 50–65% avg, stable | Eliminate GC contention; profile hot paths |
-| **Memory (idle)** | < 1400 MB | < 1350 MB | Reduce allocation overhead |
-| **Memory (active, 3h)** | < 1500 MB | < 1500 MB sustained | Verify no GC-induced bloat; audit drop trait |
-| **Memory growth (per day)** | < 0.1% | < 0.01% | Ensure deterministic cleanup |
-| **Load average (4-core)** | 3.3 avg | 3.0–3.5 avg | Maintain headroom; no GC pauses |
-| **GC pauses** | 0 (expected) | 0 (verified) | Confirm no unexpected allocations |
+| **Memory (active)** | 1538 MB active (~54% of 2.84 GB available RAM); ~20 processes across 16 services / 8 startup stages | 206 MB full-stack resident (14 supervised services + Python subprocess) | Collapse the per-process Node.js footprint into a small set of supervised Rust services |
+| **CPU** | idle 52%, 3h active 64% | avg 6.3%, peak 8.8%, zero drift over the full soak | Remove event-loop/GC contention; profile hot paths |
+| **Load average (4-core)** | 3.30 avg (3h active) | avg 0.50, peak 1.81 (7.8h soak) | Maintain headroom; no GC pauses (Rust has no GC) |
+| **System memory headroom** | not separately tracked; known incident — a data-field expansion drove RSS +13 MB/h, breaching the 500 MB per-service cap after ~14h (auto-restart), with steady-state CPU p90 rising ~140%→169.5%, 4-core | system-available memory 6024 → 5885 MB over 7.8h (−139 MB); see `04-testing-strategy.md` for the one sustained-growth issue found and fixed during soak testing | Soak testing catches allocator/runtime-level growth that unit tests cannot |
+| **Service restarts / startup stability** | per-service memory cap (200 MB–2 GB) triggers auto-restart; cold boot to full service availability ≈ 2m30s | 3 restarts in the first 66 minutes (startup stabilization), then 0 restarts over the following 6.7h; longest clean soak to date is 10.6h | Supervised startup; see `04-testing-strategy.md` |
+| **GC pauses** | 0 (V8 GC exists but was not the bottleneck here) | 0 (no GC in Rust) | N/A |
 
 #### 3. Hardening & Reliability
 - **Error handling**: Replace panics with graceful degradation (retry, fallback, alerting)
@@ -126,15 +126,14 @@ Target metrics from Problem Statement:
 
 ### Phase B Success Criteria
 - ✓ All `TODO(port)` and `FIXME(port)` markers resolved or reclassified
-- ✓ Performance targets met (CPU 50–65% avg, Memory < 1500 MB sustained, Growth < 0.01%/day)
-- ✓ 90-day continuous operation test passes without crashes or restarts
-- ✓ Load average stable (3.0–3.5 on 4-core, no GC-induced spikes)
+- ✓ Performance targets met: CPU avg 6.3% / peak 8.8% (7.8h soak, 4-core ARM Cortex-A53); full-stack resident memory 206 MB across 14 supervised services + Python subprocess; load average avg 0.50 / peak 1.81 (4-core)
+- ✓ Longest continuous soak to date (10.6h) passes with the memory-growth issue found during soak testing fixed and the slope trending negative in the final 2h (see `04-testing-strategy.md`). Note: "90 days" elsewhere in this project refers only to the certificate rotation cycle, not an uptime requirement.
 - ✓ Phase A golden-master parity maintained (no regressions)
 - ✓ Team fully trained and confident in Rust codebase
 
 ---
 
-## Staged Rollout: Stage 0–4 (Weeks 12–16)
+## Staged Rollout: Stage 0–4 (~22 Weeks)
 
 ### Philosophy
 Incremental deployment with automated safety gates; each stage can be rolled back in < 1 minute.
@@ -143,7 +142,7 @@ See `../diagrams/staged-rollout-timeline.svg` for visual timeline.
 
 ---
 
-### Stage 0: Bootstrap & Infrastructure (Week 12, Low Risk)
+### Stage 0: Bootstrap & Infrastructure (Week 0, Low Risk)
 
 **Objective**: Deploy Rust binaries and systemd infrastructure to test fleet; verify no service startup issues.
 
@@ -171,7 +170,7 @@ systemctl start node-gateway
 
 ---
 
-### Stage 1: Low-Risk Services (Week 13, Medium Risk)
+### Stage 1: Low-Risk Services (Weeks 1–5, Low Risk)
 
 **Objective**: Deploy independent services with no upstream dependencies.
 
@@ -182,7 +181,7 @@ systemctl start node-gateway
 
 **Rollback Trigger:**
 - Service crashes repeatedly
-- Memory leaks detected (growing > 0.1% per day)
+- Memory leaks detected (sustained positive RSS growth slope observed during monitoring, as distinct from normal startup transients — see `04-testing-strategy.md` for the soak-testing method used to detect this)
 - GPIO control fails (LED not responding)
 
 **Rollback Procedure:**
@@ -191,42 +190,14 @@ systemctl stop aeg-led aeg-config
 # Node.js resumes control
 ```
 
-**Duration**: 1 week; deployed to 20–30% of fleet  
+**Duration**: ~4 weeks (Weeks 1–5); deployed to 20–30% of fleet  
 **Go/No-Go Gate**: All Stage 1 devices stable; LED control 100% functional; zero memory leaks
 
 ---
 
-### Stage 2: Medium-Risk Services (Week 14, Medium-High Risk)
+### Stage 2: Medium-Risk Services (Weeks 6–9, Medium Risk)
 
-**Objective**: Deploy stateful services; test persistence and concurrency.
-
-**Scope:**
-- Deploy: `aeg-sensors` (sensor aggregation, DB writes)
-- Deploy: `aeg-vrms` (meter reading calculations)
-- Test: DB write conflicts? Sensor reading accuracy? Data consistency?
-
-**Rollback Trigger:**
-- Sensor reading divergence from Node.js baseline (> 1% error)
-- Database corruption or query failures
-- Event processing latency > 100ms (worse than Phase A)
-
-**Rollback Procedure:**
-```
-systemctl stop aeg-sensors aeg-vrms
-# Verify DB is not corrupted
-sqlite3 /var/lib/aeg/data.db "PRAGMA integrity_check"
-# Rollback DB to checkpoint if needed
-# Node.js resumes
-```
-
-**Duration**: 1 week; deployed to 40–50% of fleet  
-**Go/No-Go Gate**: Sensor readings 100% accurate; zero DB corruption incidents; latency targets met
-
----
-
-### Stage 3: High-Risk Services (Week 15, High Risk)
-
-**Objective**: Deploy critical services; full feature parity required.
+**Objective**: Deploy event-streaming and firmware-update services; test message delivery and OTA reliability.
 
 **Scope:**
 - Deploy: `aeg-mqtt` (MQTT client, event streaming)
@@ -237,7 +208,7 @@ sqlite3 /var/lib/aeg/data.db "PRAGMA integrity_check"
 - MQTT message loss > 0.1% (serious data loss)
 - OTA update fails or leaves device in bad state
 - Cloud API connection fails
-- Latency tail (95th percentile) > 20ms (worse than Phase A)
+- Per-second pipeline latency exceeds the 500 ms budget ceiling observed during soak testing (Phase B measured p95 is 56.4 ms, 5.6% of the 1-second budget, across a 285-sample run — see `04-testing-strategy.md`), or shows a sustained upward trend versus that baseline
 
 **Rollback Procedure:**
 ```
@@ -248,24 +219,52 @@ systemctl stop aeg-mqtt aeg-ota
 # Notify cloud backend to resume polling (fallback mode)
 ```
 
-**Duration**: 2 weeks; deployed to 60–70% of fleet  
+**Duration**: ~4 weeks (Weeks 6–9); deployed to 40–50% of fleet  
 **Go/No-Go Gate**: 100% message delivery, zero failed OTA updates, 100% cloud connectivity, zero data loss
 
 ---
 
-### Stage 4: Cutover & Full Migration (Week 16, Rollback Window = 48h)
+### Stage 3: High-Risk Services — Vibration, Temperature & Sensor Data (Weeks 10–16, High Risk)
+
+**Objective**: Deploy stateful vibration/temperature/sensor-data services; test persistence and concurrency. This is the highest-risk stage in the rollout.
+
+**Scope:**
+- Deploy: `aeg-sensors` (sensor aggregation, DB writes)
+- Deploy: `aeg-metrics` (signal RMS aggregation, e.g. meter-reading calculations)
+- Test: DB write conflicts? Sensor reading accuracy? Data consistency?
+
+**Rollback Trigger:**
+- Sensor reading divergence from Node.js baseline (> 1% error)
+- Database corruption or query failures
+- Per-second pipeline latency exceeds the 500 ms budget ceiling, or any sample drifts materially above the Phase B soak baseline (p95 56.4 ms / 5.6% of the 1-second budget; see `04-testing-strategy.md`)
+
+**Rollback Procedure:**
+```
+systemctl stop aeg-sensors aeg-metrics
+# Verify DB is not corrupted
+sqlite3 /var/lib/aeg/data.db "PRAGMA integrity_check"
+# Rollback DB to checkpoint if needed
+# Node.js resumes
+```
+
+**Duration**: ~7 weeks (Weeks 10–16); deployed to 60–70% of fleet  
+**Go/No-Go Gate**: Sensor readings 100% accurate; zero DB corruption incidents; latency within the measured budget
+
+---
+
+### Stage 4: Cutover & Full Migration — REST App Server (Weeks 17–22, Medium Risk, Rollback Window = 48h)
 
 **Objective**: Full fleet migration; Node.js binary decommissioned.
 
 **Scope:**
-- Deploy: `aeg-appserver` (REST API, replace Node.js monolith)
-- Disable: Node.js process (PM2)
+- Deploy: `aeg-appserver` (REST API, replace Node.js appserver process)
+- Disable: Node.js process (process supervisor)
 - Test: Full feature parity; all API clients functional
 
 **Rollback Trigger (48h Window):**
 - Any service crashes
-- API response time > 50ms (95th percentile)
-- Memory usage growth > 0.1% per day
+- Per-second processing pipeline exceeds the 500 ms budget ceiling, or p95 drifts materially above the Phase B soak baseline (56.4 ms / 5.6% of the 1-second budget — see `04-testing-strategy.md`); `aeg-appserver` is the single largest migration unit in the rollout, so this is the most consequential gate
+- Memory usage trending upward with no return to baseline (full-stack resident baseline is 206 MB; see soak-slope methodology in `04-testing-strategy.md`)
 - Data corruption incidents
 
 **Rollback Procedure (Emergency):**
@@ -278,16 +277,16 @@ systemctl start node-gateway
 # Cloud backend auto-detects failover via health checks
 ```
 
-**Duration**: 1 week active rollout; 48-hour rollback window  
+**Duration**: ~6 weeks (Weeks 17–22); 48-hour rollback window  
 **Go/No-Go Gate**: 
-- All 10 REST API endpoints respond < 10ms @ 95th percentile
+- Processing pipeline stays within the measured budget: p95 ≤ 56.4 ms (5.6% of the 1-second budget; 285-sample Phase B measurement), zero samples exceeding 500 ms
 - MQTT heartbeat interval maintained (no message loss)
 - Zero service restarts over 24 hours
-- Memory stable (< 0.01% growth per day)
+- Memory stable at or near the 206 MB full-stack baseline; no sustained upward slope
 
-**Post-Cutover (Week 17+):**
+**Post-Cutover (Week 23+):**
 - Monitor fleet for 2 weeks
-- If stable: Decommission Node.js binary; retire PM2
+- If stable: Decommission Node.js binary; retire process supervisor
 - If issues: Extend monitoring and debug
 
 ---
@@ -310,10 +309,11 @@ stages:
         
   - test-phase-b:
       script: |
-        # Performance targets
+        # Performance targets — thresholds anchored to the Phase B soak baseline
+        # (p95 56.4 ms / 5.6% of the 1-second budget; 206 MB full-stack resident)
         perf-benchmark > results.json
-        if results.json latency_p95 > 10ms; then exit 1; fi
-        if results.json memory_growth > 0.01%; then exit 1; fi
+        if results.json latency_p95_ms > 500; then exit 1; fi  # budget ceiling; 0 samples exceeded this in the 285-sample baseline run
+        if results.json memory_slope_mb_per_hour > 0; then exit 1; fi  # flag any sustained positive slope — this is how the arena-growth issue was caught (see 04-testing-strategy.md)
         
   - marker-census:
       script: |
@@ -336,21 +336,21 @@ stages:
         
   - stage-2-deploy:
       script: |
-        - Verify sensor readings match Node.js baseline (< 1% error)
-        - Check DB integrity post-write
-        - Golden-master test on sensor sample data
-        
-  - stage-3-deploy:
-      script: |
         - Run MQTT message loss test (expect 0 loss)
         - Run OTA update simulation
         - Cloud connectivity health check
         
+  - stage-3-deploy:
+      script: |
+        - Verify sensor readings match Node.js baseline (< 1% error)
+        - Check DB integrity post-write
+        - Golden-master test on sensor sample data
+        
   - stage-4-deploy:
       script: |
-        - Full API endpoint test (10 endpoints)
+        - Processing pipeline latency test (p95 within the 56.4 ms / 5.6%-of-budget baseline)
         - 24-hour load test (no crashes)
-        - Memory soak test (no growth > 0.01%)
+        - Memory soak test (flag any sustained positive RSS slope per service; see 04-testing-strategy.md)
 ```
 
 ---
@@ -383,14 +383,14 @@ Automatic Health Check Failed?
 
 | Stage | Duration | Fleet Size | Rollback Window | Team Load |
 |---|---|---|---|---|
-| Phase A | 8 weeks | N/A (lab testing) | N/A | 2–3 FTE engineers |
-| Phase B | 4 weeks | N/A (lab + extended testing) | N/A | 1–2 FTE engineers |
-| Stage 0 | 1 week | 5–10 devices | 10 minutes | 1 on-call engineer |
-| Stage 1 | 1 week | 20–30 devices | 10 minutes | 1 on-call engineer |
-| Stage 2 | 1 week | 40–50 devices | 1 hour | 2 on-call engineers |
-| Stage 3 | 2 weeks | 60–70 devices | 2 hours | 2 on-call engineers |
-| Stage 4 | 1 week | 100% fleet | 48 hours | 3 on-call engineers |
-| **Total** | **~16 weeks** | **Progressive** | **Decreasing** | **Varies** |
+| Stage 0 | ~1 week (Week 0) | 5–10 devices | 10 minutes | 1 on-call engineer |
+| Stage 1 | ~4 weeks (Weeks 1–5) | 20–30 devices | 10 minutes | 1 on-call engineer |
+| Stage 2 | ~4 weeks (Weeks 6–9) | 40–50 devices | 1 hour | 2 on-call engineers |
+| Stage 3 | ~7 weeks (Weeks 10–16, high risk) | 60–70 devices | 2 hours | 2 on-call engineers |
+| Stage 4 | ~6 weeks (Weeks 17–22) | 100% fleet | 48 hours | 3 on-call engineers |
+| **Project total** | **~22 weeks (Stage 0–4)** | **Progressive** | **Decreasing then 48h** | **Varies** |
+
+Phase A (Faithful Port) and Phase B (Harden & Optimize) are not additional time on top of this — they describe *what kind of work* is happening inside Stage 0–2 (porting + golden-master validation) versus Stage 2–4 (hardening + performance tuning), respectively. They run concurrently with, not in sequence before, the staged rollout.
 
 ---
 

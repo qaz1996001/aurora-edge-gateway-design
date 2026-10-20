@@ -8,16 +8,19 @@
 
 ## Context
 
-The original Node.js implementation is a monolith: all 40+ modules (appserver, sensors, MQTT, LED control, OTA, etc.) run in a single process. This creates:
-- **Single point of failure**: One crash cascades to entire system
-- **Deployment complexity**: Any module change requires full process restart
-- **Difficult maintenance**: Dependencies between modules unclear; hard to change one without breaking another
+The original Node.js implementation already uses a process supervisor to manage multiple independent Node.js and Python processes, providing basic process-level fault isolation. However, individual processes still face limitations:
+- **Per-process memory leaks**: Circular references in event handling cause gradual heap growth; no compile-time safety guarantees for module boundaries
+- **GC pauses within processes**: Garbage collection runs frequently; unpredictable stop-the-world delays during peak load
+- **Lack of type safety at IPC boundaries**: Module boundaries are enforced by convention, not by the compiler; runtime errors common in inter-process communication
+- **Manual process coordination**: Dependencies between processes tracked manually; no declarative service management; restart ordering error-prone
+
+The Rust rewrite opportunity: decompose the existing multi-process architecture into a cleaner architecture where each logical domain (sensors, LED control, OTA updates, etc.) becomes its own systemd-managed service with compile-time type guarantees at service boundaries. This strengthens the existing process isolation with language-level safety.
 
 ---
 
 ## Decision
 
-**Decompose the Node.js monolith into independent Rust crates**, with each crate compiled into its own systemd-managed binary (when user-facing) or a shared library (for internal abstractions).
+**Map existing Node.js process boundaries into independent Rust crates**, with each crate compiled into its own systemd-managed binary (when user-facing) or a shared library (for internal abstractions). Strengthen the mapping with compile-time type safety and clearer domain boundaries.
 
 **Decomposition Principles:**
 1. **One logical module → one Rust crate** (e.g., sensor aggregation → `aeg-sensors` crate)
@@ -31,10 +34,11 @@ The original Node.js implementation is a monolith: all 40+ modules (appserver, s
 
 ### Why Decompose?
 
-**Fault Isolation**
+**Fault Isolation & Compile-Time Safety**
 - LED control crash doesn't kill sensor aggregation
-- OTA firmware update can restart without touching database
-- **Result**: System degrades gracefully; 99.9% uptime vs. 90% with monolith
+- OTA firmware update can restart independently without touching database
+- Service boundaries are verified at compile time (type system enforces correctness); runtime IPC errors caught early
+- **Result**: System degrades gracefully; existing process-level isolation is strengthened by compile-time type safety
 
 **Independent Scaling**
 - Each service can be horizontally scaled (run multiple instances on multicore ARM)
@@ -51,7 +55,7 @@ The original Node.js implementation is a monolith: all 40+ modules (appserver, s
 - Teams can work on different crates in parallel (less merge conflicts)
 - One team can optimize sensor aggregation without breaking appserver routes
 - Testing is per-crate (faster feedback loop)
-- **Result**: 2–3× faster development during port
+- **Result**: Crate boundaries make parallel development and independent testing easier during the port
 
 ### Crate Organization (Dependency Tiers)
 
@@ -69,7 +73,7 @@ Tier 2: Protocol Clients (Foundation only)
 
 Tier 3: Domain Logic (Tier 0–2 only)
   ├─ aeg-sensors (aggregation)
-  ├─ aeg-vrms (calculations)
+  ├─ aeg-metrics (signal RMS aggregation)
   ├─ aeg-led (GPIO control)
   └─ aeg-ota (firmware updates)
 
@@ -103,7 +107,7 @@ Tier 4: Public Interfaces (all tiers)
 
 ### Trade-Offs Accepted
 - **Slight IPC latency overhead** (0.1–1 ms per inter-service call) for **fault isolation and operational clarity**
-- **More complex deployment** (6–8 systemd units) for **independent service management**
+- **More complex deployment** (the actual decomposition landed at 25 crates, 19 binaries, and 14 systemd-supervised services) for **independent service management**
 
 ---
 

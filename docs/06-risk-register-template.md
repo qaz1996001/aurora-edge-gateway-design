@@ -13,7 +13,7 @@ Risks related to code quality, architectural correctness, or performance targets
 
 **Examples:**
 - Behavioral parity not achieved (Rust outputs differ from Node.js)
-- Performance targets not met (latency > 10ms, memory > 40MB)
+- Performance targets not met (e.g., end-to-end per-cycle latency grows well beyond the established baseline — p95 56.4 ms, ~5.6% of the 1-second per-cycle budget, measured on the 4-core ARM Cortex-A53 target platform — or resident memory grows well beyond the measured full-stack baseline of 206 MB across 14 supervised services + Python subprocess)
 - Memory leaks in Rust (misuse of unsafe blocks or circular references in Arc/Rc)
 - Database corruption (SQLite PRAGMA integrity_check fails)
 
@@ -147,16 +147,56 @@ Risks related to external factors outside team control.
 | **Risk ID** | RISK-012 |
 | **Category** | Technical (Quality) |
 | **Severity** | 🟢 LOW |
-| **Title** | LED Color Rendering Slightly Different (RGB Precision) |
-| **Description** | Rust GPIO library (rppal) reports slightly different RGB values than Node.js rpi.GPIO (e.g., 255 vs. 254 for full red). Visually imperceptible but fails strict color-match tests. |
-| **Probability** | 75% (very likely — GPIO libraries have different precision) |
-| **Impact** | Test failures in color verification tests; no real user impact (colors look identical). |
-| **Mitigation** | <ul><li>Accept ±1 tolerance in color tests (allow 255 ≈ 254)</li><li>Or: Normalize values on both sides to same scale before comparing</li></ul> |
+| **Title** | Indicator Lamp Serial-Port Timing/Enumeration Differences |
+| **Description** | The indicator lamp is controlled over a USB serial port (9600 baud, 8N1), not GPIO. The Rust serial crate (`tokio-serial` / `serialport`) may enumerate the USB device in a different order than Node.js on boot, or exhibit slightly different open/write timing and retry behavior on first connect. This could cause a brief command-ack latency difference or a transient failure to find the correct device path, without affecting the actual lamp color/state once connected. |
+| **Probability** | 40% (moderate — USB enumeration order is not guaranteed stable across reboots on either stack) |
+| **Impact** | Possible flaky integration tests around first-connect timing; no sustained user-visible impact once the port is open. |
+| **Mitigation** | <ul><li>Pin the device by stable identifier (serial number / udev symlink) rather than relying on enumeration order</li><li>Add a bounded retry/backoff on initial port open, matching the Node.js stack's observed retry behavior</li><li>Add a tolerance window in timing-based integration tests</li></ul> |
 | **Status** | 🟠 Deferred to Phase B (documented in FIXME(port) marker) |
 | **Owner** | Carol (LED module lead) |
 | **Created** | 2026-10-01 |
 | **Last Updated** | 2026-10-10 |
 | **Mitigation Completion Target** | Phase B (week 10) |
+
+---
+
+### Example Risk: RISK-013
+
+| Field | Value |
+|---|---|
+| **Risk ID** | RISK-013 |
+| **Category** | Operational (Disk/Storage) |
+| **Severity** | 🟠 HIGH |
+| **Title** | Disk Growth from WAV Capture and Service Logs |
+| **Description** | WAV capture accumulates at roughly +3.8 GB per 3 hours (≈30 GB/day) on the target platform (28 GB total disk). A single service log (message-bus) reached 914 MB within a 7.8-hour soak run, and a sensor-data service log reached 203 MB in the same window. Before a disk-cleanup fix, the cleanup job was triggering roughly every 1.3 hours (≈18 times/day), indicating the disk fills fast enough to need very frequent intervention. |
+| **Probability** | 100% (observed — this happened during soak testing, not hypothetical) |
+| **Impact** | Disk exhaustion halts WAV capture and/or logging, and on a 28 GB disk with ~30 GB/day WAV growth, unmanaged accumulation would exhaust free space within roughly a day without cleanup. |
+| **Mitigation** | <ul><li>Tune disk-cleanup cadence and retention so cleanup runs on a predictable schedule rather than reactively (post-fix cadence observed at roughly every 7 hours, ≈3.4 times/day)</li><li>Cap or rotate the message-bus and sensor-data service logs</li><li>Track disk-free trend as a first-class soak-test metric, not just crash/no-crash</li></ul> |
+| **Status** | 🟢 Resolved (cleanup cadence corrected; monitored during subsequent soak runs) |
+| **Owner** | Platform team |
+| **Created** | 2026-09-xx |
+| **Last Updated** | 2026-10-xx |
+| **Mitigation Completion Target** | Complete |
+
+---
+
+### Example Risk: RISK-014
+
+| Field | Value |
+|---|---|
+| **Risk ID** | RISK-014 |
+| **Category** | Technical (Memory, Runtime) |
+| **Severity** | 🟠 HIGH |
+| **Title** | glibc Multi-Threaded Arena Growth in the Message-Bus Process |
+| **Description** | Even in Rust, the message-bus process showed a linear memory increase of roughly 6.5 MB/hour during a 7.8-hour soak test (45.0 MB → 95.3 MB, +112%). Root cause was glibc's multi-threaded malloc arena behavior (64 arenas), not a Rust-level leak (no `unsafe` misuse or `Arc`/`Rc` cycle involved). This is a reminder that "written in Rust" does not automatically rule out native-allocator-level memory growth. |
+| **Probability** | 100% (observed directly in soak testing) |
+| **Impact** | Left unmitigated, this growth pattern would eventually degrade or crash the message-bus process on long-running edge deployments; only a multi-hour soak test surfaces it — short functional tests do not. |
+| **Mitigation** | <ul><li>Set `MALLOC_ARENA_MAX=2` to cap glibc arena count</li><li>Re-run soak test to confirm: a subsequent 10.6-hour soak passed, with the memory trend ending at roughly −3.69 MB/hour</li><li>Make multi-hour soak testing (not just short functional tests) a standard gate before any stage that introduces a new long-running service (see ADR-0005 Stage 3)</li></ul> |
+| **Status** | 🟢 Resolved (fix verified via 10.6-hour soak test) |
+| **Owner** | Platform team |
+| **Created** | 2026-09-xx |
+| **Last Updated** | 2026-10-xx |
+| **Mitigation Completion Target** | Complete |
 
 ---
 
@@ -200,6 +240,8 @@ Team lead (or risk owner) assesses:
 | RISK-007 | OTA Update Timeout on Slow Network | Technical | 🟡 MEDIUM | Resolved | Bob | 2026-10-08 |
 | RISK-010 | Team Rust Experience | Knowledge | 🟡 MEDIUM | Ongoing | Lead | Continuous |
 | RISK-012 | LED Color RGB Precision | Technical | 🟢 LOW | Deferred to Phase B | Carol | 2026-10-25 |
+| RISK-013 | Disk Growth from WAV Capture and Service Logs | Operational | 🟠 HIGH | Resolved | Platform team | Complete |
+| RISK-014 | glibc Arena Growth in Message-Bus Process | Technical | 🟠 HIGH | Resolved | Platform team | Complete |
 | RISK-015 | rumqttc Dependency Vulnerability | External | 🟡 MEDIUM | Monitoring | Alice | TBD (dependency update) |
 
 ---

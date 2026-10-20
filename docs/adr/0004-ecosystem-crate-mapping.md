@@ -27,12 +27,12 @@ Adopt the following npm → Rust crate mapping (see table below).
 | npm (Node.js) | Rust (crate) | Domain | Rationale |
 |---|---|---|---|
 | **express** | **axum** | HTTP Server | Zero-cost abstractions; type-safe routing; excellent async integration with tokio |
-| **mqtt** (rumba) | **rumqttc** | MQTT Client | Async-first MQTT library; excellent embedded/IoT support |
+| **mqtt** | **rumqttc** | MQTT Client | Async-first MQTT library; excellent embedded/IoT support |
 | **better-sqlite3** | **rusqlite** | SQLite Driver | Synchronous API is simpler for our use case; no async DB driver overhead needed |
 | **socket.io** | **tokio-tungstenite** | WebSocket/Real-time | Lightweight WebSocket library; sufficient for our real-time needs |
 | **winston** | **tracing** + **slog** | Logging | Structured logging with excellent async support; journald integration |
 | JSON (native) | **serde_json** | JSON Serialization | Zero-copy; standard Rust serialization |
-| **rpi.GPIO** (npm) | **rppal** | GPIO/PWM Control | Rust-native GPIO library; actively maintained; excellent ARM support |
+| **serialport** (npm) | **tokio-serial** / **serialport** | Indicator Lamp (Serial Control) | Rust-native serial port library; indicator lamp hardware is controlled over USB serial (9600 8N1), not GPIO |
 | **request** (HTTP client) | **reqwest** | HTTP Client | Modern async HTTP; excellent error handling |
 | **fs** (native) | **tokio::fs** | Async File I/O | Async file operations without blocking tokio runtime |
 | **child_process** | **tokio::process** | Subprocess Spawning | Async subprocess management (for Python IPC) |
@@ -63,9 +63,9 @@ Adopt the following npm → Rust crate mapping (see table below).
 
 ---
 
-### MQTT Client: Rumba → Rumqttc
+### MQTT Client: mqtt → rumqttc
 
-**npm Choice**: mqtt (rumba package)
+**npm Choice**: mqtt
 
 **Rust Alternative Candidates**:
 - **paho-mqtt**: C library wrapper; works but heavier
@@ -77,6 +77,9 @@ Adopt the following npm → Rust crate mapping (see table below).
 - Async-first (integrates cleanly with tokio)
 - Good API; handles reconnection and backpressure
 - Actively maintained
+
+**Primary Role in New Architecture**:
+In the Rust architecture, `rumqttc` serves as the **internal services message bus** (similar to the original system), not as the primary cloud uplink. Services publish/subscribe to local MQTT topics for inter-service event coordination (e.g., sensor-updated triggers LED updates). The cloud communication is handled via **REST API** (heartbeat & batch synchronization). MQTT cloud uplink is an optional, factory-disabled feature for acceleration; it is not the default uplink path.
 
 ---
 
@@ -91,7 +94,7 @@ Adopt the following npm → Rust crate mapping (see table below).
 - **sqlite**: Pure Rust implementation; slower; not recommended
 
 **Selection Rationale**:
-- Our database workload is not async-heavy (simple queries, < 10ms latency)
+- Our database workload is light and not async-heavy (simple queries, low request volume)
 - Synchronous API is simpler; no async overhead needed
 - Excellent documentation; widely used
 - No async complexity for database operations
@@ -118,21 +121,23 @@ Adopt the following npm → Rust crate mapping (see table below).
 
 ---
 
-### GPIO Control: npm rpi.GPIO → rppal (Rust)
+### Indicator Lamp Control: npm serialport → tokio-serial / serialport (Rust)
 
-**npm Choice**: npm module wrapping Python RPi.GPIO
+The indicator lamp is controlled over a USB serial port (9600 baud, 8N1) — it is not wired to GPIO. The correct mapping target is therefore a serial-port crate, not a GPIO crate.
+
+**npm Choice**: Node.js serial port library talking to the lamp over USB serial (9600 8N1)
 
 **Rust Alternative Candidates**:
-- **rppal**: Pure Rust GPIO; excellent ARM support ✅
-- **sysfs_gpio**: Lower-level; more boilerplate; less safe
-- C FFI to pigpio: Possible but unnecessary complexity
+- **tokio-serial**: Async serial port I/O integrated with tokio ✅
+- **serialport**: Synchronous, cross-platform serial port library; simpler for low-frequency control commands ✅
+- Raw `/dev/ttyUSB*` access via `std::fs`: Possible but reimplements line discipline handling unnecessarily
 
 **Selection Rationale**:
-- Pure Rust (no Python overhead; no interpreter start cost)
-- Excellent ARM support (tested on Raspberry Pi, BeagleBone, etc.)
-- Type-safe API; prevents invalid GPIO states
+- Matches the actual hardware interface (USB serial, not GPIO)
+- `tokio-serial` integrates with the existing tokio runtime if lamp commands need to be async; `serialport` is a simpler synchronous option given the low command frequency
+- Type-safe port configuration (baud rate, parity, stop bits)
 
-**Improvement**: Eliminates Python subprocess overhead for GPIO (Node.js called Python; Rust calls C directly).
+**Improvement**: Eliminates the Python subprocess that previously bridged to the serial device (Node.js called Python for serial I/O; Rust talks to the serial port directly).
 
 ---
 

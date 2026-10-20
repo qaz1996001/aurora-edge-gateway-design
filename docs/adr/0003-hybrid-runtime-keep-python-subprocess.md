@@ -40,9 +40,9 @@ The original Node.js implementation calls out to Python subprocesses for these t
 
 **Runtime Cost Acceptable**
 - DSP computations amortize IPC overhead (heavy computation; light communication)
-- FFT on 1024-sample window: ~5ms computation; 0.5ms IPC overhead = acceptable
-- ML inference: ~50–200ms computation; IPC negligible
-- **Result**: No performance regression vs. Node.js
+- IPC round-trip overhead (Unix socket + bincode serialization) is small relative to the DSP/ML computation itself, so crossing the process boundary is not expected to become the bottleneck
+- We have not run isolated DSP/ML micro-benchmarks for this ADR. The real measured computation-cost distribution on the edge platform (4-core ARM Cortex-A53, per-second sensor pipeline, 285-sample measurement run) is JSON deserialization 18.1 ms + RMS calculation (×3 axes) 3.7 ms + diagnostics calculation 13.7 ms = 35.5 ms of server-side compute per cycle — well inside the per-second budget, and indicating that computation (not IPC) dominates cost
+- **Result**: No observed performance regression vs. Node.js within the per-second latency budget
 
 ### Why Not Rewrite in Rust?
 
@@ -189,7 +189,7 @@ while True:
 5. **Operational Simplicity**: If Python crashes, gateway continues (isolated process)
 
 ### Negative
-1. **IPC Overhead**: ~1–2 ms per request + serialization cost (bincode/JSON)
+1. **IPC Overhead**: Additional latency per request from the socket round-trip and serialization (bincode/JSON); not isolated via a dedicated DSP/ML benchmark, but small relative to the DSP/ML computation itself based on overall pipeline latency measurements (see Performance Impact below)
    - **Mitigation**: Batch requests; only use for heavy computations
 2. **Process Management**: Python subprocess must be kept alive or respawned efficiently
    - **Mitigation**: Explicit subprocess lifecycle management; keep-alive strategy
@@ -199,20 +199,27 @@ while True:
    - **Mitigation**: Document as required dependency; distribute Python runtime
 
 ### Trade-Offs Accepted
-- **Slight IPC latency** (1–2 ms) for **ecosystem benefits and development velocity**
+- **Added IPC latency** (not isolated in a dedicated benchmark, but small relative to DSP/ML computation itself) for **ecosystem benefits and development velocity**
 - **Dual-runtime deployment** (Rust + Python) for **specialized workload advantages**
 
 ---
 
 ## Performance Impact
 
-| Operation | Node.js (In-Process) | Rust + Python (IPC) | Delta |
-|---|---|---|---|
-| FFT (1024 samples) | 8 ms | 5 ms (DSP) + 1 ms (IPC) = 6 ms | 25% faster |
-| Anomaly detection | 2 ms | 1 ms (DSP) + 0.5 ms (IPC) = 1.5 ms | 25% faster |
-| ML inference (100ms model) | 105 ms | 100 ms (DSP) + 1 ms (IPC) = 101 ms | ~4% faster |
+We have not run isolated per-operation benchmarks (FFT, anomaly detection, ML inference) comparing Node.js in-process execution against Rust + Python IPC — no such benchmark table exists for this project, so no per-operation figures are provided here.
 
-**Conclusion**: IPC overhead is negligible compared to actual computation time.
+What we can state from real measurements on the production edge pipeline (4-core ARM Cortex-A53, per-second sensor pipeline, 285-sample measurement run) is the server-side computation breakdown for one processing cycle:
+
+| Stage | Measured Time |
+|---|---|
+| JSON deserialization | 18.1 ms |
+| RMS calculation (×3 axes) | 3.7 ms |
+| Diagnostics calculation | 13.7 ms |
+| **Total server-side compute** | **35.5 ms** |
+
+This 35.5 ms total is a small fraction of the per-second processing budget (end-to-end pipeline latency: median 55.5 ms, p95 56.4 ms — see ADR-0005). IPC round-trip overhead to the Python subprocess adds to this but is small relative to the DSP/ML computation itself.
+
+**Conclusion**: IPC round-trip overhead is small relative to the DSP/ML computation itself, so the process boundary has not been observed to be a bottleneck. This is a qualitative conclusion based on overall pipeline latency, not an isolated IPC benchmark.
 
 ---
 
@@ -241,9 +248,9 @@ tail -f /var/log/aeg-dsp.log
 # Add tracing to measure IPC roundtrip time
 RUST_LOG=aeg_sensors=debug aeg-sensors
 
-# Example debug output:
+# Example debug output (illustrative log format; not a measured benchmark):
 # [DEBUG] aeg_sensors: Sending FFT request (1024 samples)
-# [DEBUG] aeg_sensors: Python response received in 6.2ms
+# [DEBUG] aeg_sensors: Python response received in <N>ms
 ```
 
 ---

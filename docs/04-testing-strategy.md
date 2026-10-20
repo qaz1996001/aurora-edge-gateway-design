@@ -151,74 +151,96 @@ fi
 
 **Purpose**: Validate performance targets and reliability under extreme conditions.
 
-#### 4a. Load Testing (Peak Throughput)
+#### 4a. Load Testing (Representative & Peak Load)
 ```bash
-# Simulate active load: 500-1000 MQTT msg/sec + 100 REST req/sec for 3 hours
+# Exercise representative production traffic, then a peak-load profile,
+# on the target 4-core ARM Cortex-A53 platform
 load-generator \
-  --mqtt-rate 500 \
-  --http-rate 100 \
+  --profile representative-production \
   --duration 10800s \
   --target localhost:3000
 
-# Measure results
-# - CPU usage (should stay 50–65%)
-# - Memory usage (should stay < 1500 MB)
-# - Load average (should stay < 4.0 on 4-core)
+load-generator \
+  --profile peak \
+  --duration 10800s \
+  --target localhost:3000
+
+# Measure results against the Phase B soak baseline (below)
+# - CPU usage (soak baseline: 6.3% avg, 8.8% peak)
+# - Memory usage (soak baseline: 206 MB full-stack resident)
+# - Load average (soak baseline: 0.50 avg, 1.81 peak, 4-core)
 # - MQTT message delivery rate (should be 100%)
 ```
 
-**Target Metrics** (Phase B):
-- CPU average: 50–65% (no sustained > 80%)
-- CPU peak: < 100% (transient spikes OK)
-- Memory baseline: < 1400 MB idle
-- Memory active: < 1500 MB sustained
-- Load average: 3.0–3.5 on 4-core ARM (0.75–0.875/core)
-- Throughput: ≥ 1000 MQTT msg/sec + 200 REST req/sec without dropping
+**Target Metrics** (Phase B, anchored to the measured 7.8h soak baseline on 4-core ARM Cortex-A53):
+- CPU: avg 6.3%, peak 8.8%, zero drift over the soak window — compare the Node.js baseline's idle 52% / 3h-active 64% on the same hardware
+- Memory: full-stack resident 206 MB across 14 supervised services + Python subprocess — compare the Node.js baseline's 1538 MB active (~54% of 2.84 GB available)
+- Load average (4-core): avg 0.50, peak 1.81 — compare the Node.js baseline's 3.30 avg
+- Throughput: representative production load and peak load both sustained without dropping messages. We do not have a benchmarked maximum msg/sec ceiling for this platform; `--profile` exercises realistic traffic shapes rather than a specific rate, and establishing a hard throughput limit is tracked as separate follow-up work, not claimed here.
 - Message loss: 0%
-- Memory growth: < 0.01% per day
+- Memory growth: no sustained positive RSS slope over the run (see the case study in 4b below for how this is measured and what it caught)
 
-#### 4b. Memory Soak Testing (30+ Days)
+#### 4b. Memory Soak Testing (Measured: 7.8h and 10.6h Runs)
 ```bash
-# Run continuous load (realistic, not peak) for 30+ days
-# Monitor memory usage, CPU usage, and service stability
+# Run continuous representative load and monitor memory, CPU, and service stability.
+# Longest runs completed to date: 7.8h (initial baseline) and 10.6h (after the
+# MALLOC_ARENA_MAX fix described in the case study below).
 
 soak-test-runner \
-  --duration 30days \
-  --mqtt-rate 200 \
-  --http-rate 20 \
+  --duration 10.6h \
+  --profile representative-production \
   --check-interval 1hour
 
 # Output memory graph and stability report
-# Expected: Memory stable at baseline; zero crashes; zero restarts
 ```
 
+**Results — initial 7.8h soak (full stack, 4-core ARM Cortex-A53)**:
+- Full-stack resident memory: 206 MB (14 supervised services + Python subprocess)
+- CPU: avg 6.3%, peak 8.8%, zero drift over the run
+- Load average: avg 0.50, peak 1.81 (4-core)
+- System-available memory: 6024 → 5885 MB (−139 MB over 7.8h)
+- Restarts: 3 in the first 66 minutes (startup stabilization), 0 over the following 6.7h
+
 **Success Criteria**:
-- Memory baseline: stable around 1400 MB (idle)
-- Memory active: stable around 1500 MB (after 1h warm-up)
-- Memory growth: < 0.01% per day (< 150 KB/day on 1500 MB baseline)
-- CPU: stable 50–65% (no degradation or drift)
+- No sustained positive RSS slope per service over the run (not a fixed %/day figure — see the case study below for the slope methodology actually used)
+- CPU stable, no degradation or drift (7.8h soak measured flat at 6.3% avg)
 - Zero unplanned crashes (only deliberate kills for testing)
-- Zero service restarts over 30 days
-- No GC pauses (should be zero throughout)
+- Zero service restarts after the initial startup-stabilization window (0 over 6.7h in the 7.8h run; 10.6h run passed end-to-end — see case study)
+- No GC pauses (Rust has no GC runtime)
+
+#### 4b-i. Case Study: A Real Memory-Growth Bug Found and Fixed During Soak Testing
+
+This is the single most useful result soak testing produced in Phase B, and it is worth documenting in full because it shows what soak testing is actually for.
+
+**What we saw**: In the initial 7.8h soak, the message-bus process's RSS grew from 45.0 MB to 95.3 MB — a +112% increase, climbing at a roughly linear ~6.5 MB/h — while CPU usage for that same process stayed flat at 0.2% the entire time. A linear, CPU-flat growth curve is the signature of an allocator or runtime issue, not a request-driven leak in application logic.
+
+**Root cause**: glibc's multi-threaded allocator was opening up to 64 separate memory arenas for the process. Each arena keeps its own free lists, so a multi-threaded binary under glibc can accumulate retained-but-unused memory across arenas with zero memory-safety bugs in the Rust code itself — this is documented glibc allocator behavior, not a Rust-side defect.
+
+**Fix**: Set `MALLOC_ARENA_MAX=2` in the service's environment to cap the number of arenas glibc creates.
+
+**Verification (10.6h soak, post-fix)**: RSS rose to roughly 24.5 MB, then arena reclamation brought it back down to 17.2 MB. The hourly growth slope across the run: first 2 hours +5.74 MB/h, middle of the run ~0.00 MB/h, last 2 hours −3.69 MB/h — the trend reverses and the process gives memory back by the end. Test passed.
+
+**The insight**: Rewriting in Rust eliminates an entire class of memory-safety bugs — use-after-free, double-free, buffer overflows — at compile time. It does **not** make a process immune to memory growth. Allocator configuration and C runtime behavior sit below the language's safety guarantees, and only a soak test — not a unit test, not a code review — will surface that kind of growth. Soak testing stays a permanent part of the Phase B gate, not a milestone to clear once.
 
 #### 4c. Stability & Determinism Validation (24h Monitoring)
 ```bash
-# Monitor CPU, memory, and load for deterministic behavior over 24 hours
-# Verify no latency or resource spikes from GC or scheduling
+# Monitor CPU, memory, and load for deterministic behavior over 24 hours.
+# Builds on the 7.8h/10.6h soak results above; there is no GC-driven
+# scheduling jitter to account for.
 
 stability-monitor \
   --duration 86400s \
   --sample-interval 10s \
   --output stability-report.json
 
-# Expected: CPU/memory/load smooth; no transient spikes from GC
+# Expected: CPU/memory/load as flat as observed in the completed soaks
 ```
 
 **Success Criteria**:
-- CPU variation < 10% within 5-minute window (stable, no GC spikes)
-- Memory stable (no growth > 0.01% per hour)
-- Load average smooth (no > 0.5/core transient spikes)
-- No latency variance from garbage collection (0 GC pauses)
+- CPU stable around the measured 6.3% avg / 8.8% peak soak baseline, no sustained drift
+- Memory stable at the 206 MB full-stack baseline; any sustained positive slope investigated using the method in the case study above
+- Load average stable around the measured 0.50 avg / 1.81 peak baseline (4-core)
+- No latency variance from garbage collection (Rust has no GC)
 - Consistent performance across different times of day
 
 ---
@@ -234,7 +256,10 @@ synthetic-sensor-test \
   --compare-with node.js-baseline \
   --tolerance-pct 0.01  # 0.01% error allowed (floating point)
 
-# Example: If baseline computes VRMS as 230.5V, Rust must compute 230.5±0.1V
+# Illustrative example only (not a measured result): if the baseline's
+# aeg-metrics signal-RMS aggregation reports a reference value of, say,
+# 230.5 for some channel, Rust must reproduce it within the tolerance band
+# (230.5 ± 0.1 at the 0.01% setting above) to count as a golden-master match.
 ```
 
 **Success Criteria**:
@@ -347,7 +372,7 @@ Tier 1: Compile & Unit Tests (5 min)
     ↓
 Tier 2: Integration Tests (15 min)
     ├─ cargo test --test '*' (all integration tests)
-    └─ Basic load test (100 MQTT msg/sec for 1 min)
+    └─ Basic load test (representative traffic shape, 1 min)
     ↓ [on failure: stop; notify team]
     ↓
 Tier 3: Golden-Master Tests (30 min)
@@ -357,8 +382,8 @@ Tier 3: Golden-Master Tests (30 min)
     ↓ [on failure: alert code reviewer; may require manual review]
     ↓
 Tier 4: Performance Tests (60 min, only on main branch)
-    ├─ 1-hour load test (1000 MQTT msg/sec + 100 HTTP req/sec)
-    ├─ Memory soak test (6 hours)
+    ├─ 1-hour load test (peak-load profile)
+    ├─ Memory soak test (7.8h baseline run; see Category 4b)
     └─ Latency histogram
     ↓ [on failure: alert performance team]
     ↓
