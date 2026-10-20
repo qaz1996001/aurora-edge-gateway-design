@@ -79,7 +79,7 @@ app.get('/sensors', (req, res) => {
 
 ### 階段 2：Golden 資料集編譯（第 2–3 週）
 
-合併 3 週日誌至單一 `golden-dataset.json`（1.2 百萬 MQTT 訊息、50,000 REST 呼叫、10,000 DB 交易）
+合併 3 週日誌至單一 `golden-dataset.json`；目標語料規模（擷取計畫，尚未收集）約 1.2 百萬 MQTT 訊息、50,000 REST 呼叫、10,000 DB 交易
 
 ### 階段 3：Golden-Master 測試套件（Phase A 第 4 週）
 

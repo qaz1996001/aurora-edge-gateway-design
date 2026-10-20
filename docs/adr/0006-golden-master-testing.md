@@ -37,7 +37,7 @@ Implement **golden-master testing** (characterization testing):
 
 **Example**: Sensor reading calculation
 - **Unit test**: `assert_eq!(aggregate([1.0, 2.0, 3.0]), 2.0)`
-- **Golden-master**: Replays 1 million actual sensor readings; verifies every single output matches Node.js baseline
+- **Golden-master**: Replays the captured corpus of real sensor readings; verifies every output matches the Node.js baseline
 
 ---
 
@@ -129,7 +129,7 @@ Merge 3 weeks of logs into single `golden-dataset.json`:
 }
 ```
 
-**Statistics**:
+**Target corpus** (capture plan, not yet collected):
 - ~1.2 million MQTT messages
 - ~50,000 REST API calls
 - ~10,000 database transactions
@@ -276,11 +276,15 @@ If a customer reports a new edge case not in golden dataset:
 ## Validation Against Real Data
 
 ### Post-Phase A Validation
-Run Rust system **in parallel with Node.js** for 2 weeks:
-- Deploy Rust binaries to test fleet (not production)
-- Route 10% of real traffic to Rust; 90% to Node.js
-- Compare outputs in real-time
+Run the Rust system **alongside Node.js on the test fleet**, replaying captured
+traffic rather than splitting live traffic:
+- Deploy Rust binaries to the test fleet (not production)
+- Feed both stacks the same captured corpus and compare outputs
 - If outputs diverge: alert; investigate; fix
+
+Note: this is shadow comparison, not a percentage-based canary. Production
+cutover is a binary switch with a manual rollback SOP — see
+[ADR-0005](0005-staged-rollout-and-rollback.md).
 
 ---
 
@@ -292,7 +296,7 @@ Run Rust system **in parallel with Node.js** for 2 weeks:
 
 ## Success Metrics
 
-- ✓ 100% output parity on 1.2+ million real events
+- ✓ 100% output parity across the full captured corpus
 - ✓ Latency within ±5ms of Node.js baseline
 - ✓ Zero silent correctness regressions discovered in Stage 1+
 - ✓ Team confidence: "We know the Rust system behaves identically to Node.js"

@@ -270,7 +270,7 @@ These are example risks for an **illustrative** Aurora Edge Gateway rewrite; the
 
 2. **Async/Await Deadlock**: Tokio task tries to acquire two locks in different order than Node.js event loop → potential deadlock under load → HIGH severity; mitigated by explicit lock ordering enforcement and stress testing
 
-3. **Memory Fragmentation**: Long-running edge device allocates/deallocates memory; after 30 days heap is fragmented → out-of-memory crash → MEDIUM severity; mitigated by profiling allocator behavior and using jemalloc
+3. **Allocator-Level Memory Growth**: Long-running services accumulate retained-but-unused memory inside the allocator even with no leak in application code → gradual RSS growth → MEDIUM severity; mitigated by soak testing and allocator tuning. This risk has already materialised once — see RISK-014
 
 ### Operational Example Risks
 1. **Rollback Tooling Missing**: No automated procedure to switch from Rust back to Node.js → manual recovery could take hours → HIGH severity; mitigated by testing rollback procedure weekly

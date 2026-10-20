@@ -294,12 +294,12 @@ python-bridge-test \
   --throughput 100calls/sec \
   --duration 3600s
 
-# Expected: 100% success rate; latency < 50ms per call; no process leaks
+# Expected: 100% success rate; no process leaks; per-call latency recorded as a baseline
 ```
 
 **Success Criteria**:
 - All subprocess calls succeed
-- Response time < 50 ms (including Python startup time)
+- Per-call response time recorded to establish a baseline (no target has been measured yet)
 - Python processes cleaned up (no zombie processes)
 - Subprocess crashes handled gracefully (automatic restart + alert)
 

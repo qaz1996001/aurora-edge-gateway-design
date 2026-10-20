@@ -111,7 +111,7 @@ This precedent informed our confidence in the project timeline (Stage 0–4, ~22
   - Team learning of valuable systems language
   - Strong compile-time guarantees reduce production issues
 - **Cons**: 
-  - Higher upfront engineering effort (Phase A: 6–8 weeks)
+  - Higher upfront engineering effort (~22 weeks across Stage 0–4)
   - Team ramp-up on new language (2–3 weeks)
   - Longer initial development timeline
 - **Decision**: Selected — best long-term investment; addresses memory leak and determinism issues
