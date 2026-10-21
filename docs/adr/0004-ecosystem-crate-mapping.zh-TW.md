@@ -181,6 +181,21 @@ serde_json = "1.0"
 
 ---
 
+## 建置目標：Cargo Cross
+
+將 Rust 編譯到 ARM 邊緣硬體：
+```bash
+# 編譯 ARMv8（64 位元 ARM，典型邊緣裝置）
+cargo build --release --target aarch64-unknown-linux-gnu
+
+# 編譯 ARMv7（32 位元 ARM，較舊裝置）
+cargo build --release --target armv7-unknown-linux-gnueabihf
+```
+
+**工具**：`cargo-cross`，無需在本機安裝原生 ARM 工具鏈即可交叉編譯。
+
+---
+
 ## 驗證
 
 ### 合併任何程式碼前

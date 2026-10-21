@@ -223,6 +223,12 @@ while True:
 
 ---
 
+## 相關決策
+- **[ADR-0002](0002-module-to-crate-decomposition.zh-TW.md)**：感測器服務（aeg-sensors）承載 DSP 橋接
+- **架構**：混合執行時圖表見 `../02-architecture-overview.zh-TW.md`
+
+---
+
 ## 監控與除錯
 
 ### 子程序健康
