@@ -288,6 +288,36 @@ cutover is a binary switch with a manual rollback SOP — see
 
 ---
 
+## Monitoring & Observability
+
+Each run generates a detailed mismatch report:
+```json
+{
+  "passed": 1234567,
+  "failed": 0,
+  "summary": "✅ Golden-master test PASSED"
+}
+```
+
+On failure:
+```json
+{
+  "passed": 1234000,
+  "failed": 567,
+  "failures": [
+    {
+      "id": 42,
+      "test_type": "rest_call",
+      "expected": {"status": 200, "body": {...}},
+      "actual": {"status": 200, "body": {...}},  // note subtle difference
+      "diff": "response.sensors[0].voltage: expected 230.5, got 230.4"
+    }
+  ]
+}
+```
+
+---
+
 ## Related Decisions
 - **[ADR-0004](0004-ecosystem-crate-mapping.md)**: Technology choices that affect numerical behavior
 - **Testing Strategy**: See `../04-testing-strategy.md` for full testing hierarchy

@@ -2,7 +2,7 @@
 
 ## Overview
 
-The migration from Node.js to Rust is executed as a **~22-week staged rollout (Stage 0–4)**, with binary rollback switches and manual SOPs at every stage (rollback completes within 5 minutes per stage). Phase A (Faithful Port) and Phase B (Harden & Optimize) are not separate time blocks bolted onto the front of this schedule — they are the two methodological lenses applied *within* the Stage 0–4 timeline: each module is first ported faithfully (Phase A) before the stage that deploys it goes live, and hardening/optimization work (Phase B) continues alongside later stages once parity is proven. This approach minimizes risk while maintaining behavioral compatibility.
+The migration from Node.js to Rust is executed as a **~22-week staged rollout (Stage 0–4)**, with binary rollback switches and manual SOPs at every stage (rollback execution completes within 5 minutes overall, 2–4 minutes per stage). Phase A (Faithful Port) and Phase B (Harden & Optimize) are not separate time blocks bolted onto the front of this schedule — they are the two methodological lenses applied *within* the Stage 0–4 timeline: each module is first ported faithfully (Phase A) before the stage that deploys it goes live, and hardening/optimization work (Phase B) continues alongside later stages once parity is proven. This approach minimizes risk while maintaining behavioral compatibility.
 
 ### Two-Phase Philosophy
 
@@ -98,7 +98,7 @@ Fix known bugs, optimize performance, and improve reliability. All changes valid
 **Example Fixes:**
 - **RISK-003 (Sensor Drop Under Load)**: Implement priority queue + backpressure to prevent message loss during MQTT bursts
 - **RISK-007 (OTA Timeout)**: Add network timeout with exponential backoff instead of infinite wait
-- **RISK-012 (LED Flicker)**: Debounce GPIO updates; add frame-rate limiting
+- **RISK-012 (Indicator Lamp Serial-Port Enumeration)**: Pin the lamp to a stable device identifier (USB serial number / udev symlink) instead of relying on enumeration order; add retry-with-backoff on first open
 
 #### 2. Performance Optimization
 Target metrics from Problem Statement:
@@ -108,7 +108,7 @@ Target metrics from Problem Statement:
 | **Memory (active)** | 1538 MB active (~54% of 2.84 GB available RAM); ~20 processes across 16 services / 8 startup stages | 206 MB full-stack resident (14 supervised services + Python subprocess) | Collapse the per-process Node.js footprint into a small set of supervised Rust services |
 | **CPU** | idle 52%, 3h active 64% | avg 6.3%, peak 8.8%, zero drift over the full soak | Remove event-loop/GC contention; profile hot paths |
 | **Load average (4-core)** | 3.30 avg (3h active) | avg 0.50, peak 1.81 (7.8h soak) | Maintain headroom; no GC pauses (Rust has no GC) |
-| **System memory headroom** | not separately tracked; known incident — a data-field expansion drove RSS +13 MB/h, breaching the 500 MB per-service cap after ~14h (auto-restart), with steady-state CPU p90 rising ~140%→169.5%, 4-core | system-available memory 6024 → 5885 MB over 7.8h (−139 MB); see `04-testing-strategy.md` for the one sustained-growth issue found and fixed during soak testing | Soak testing catches allocator/runtime-level growth that unit tests cannot |
+| **System memory headroom** | not separately tracked; the per-service 500 MB cap left hours, not days, of margin against any sustained growth | system-available memory 6024 → 5885 MB over 7.8h (−139 MB); see `04-testing-strategy.md` for the sustained-growth issue found and fixed during soak testing | Soak testing catches allocator/runtime-level growth that unit tests cannot |
 | **Service restarts / startup stability** | per-service memory cap (200 MB–2 GB) triggers auto-restart; cold boot to full service availability ≈ 2m30s | 3 restarts in the first 66 minutes (startup stabilization), then 0 restarts over the following 6.7h; longest clean soak to date is 10.6h | Supervised startup; see `04-testing-strategy.md` |
 | **GC pauses** | 0 (V8 GC exists but was not the bottleneck here) | 0 (no GC in Rust) | N/A |
 
@@ -136,7 +136,7 @@ Target metrics from Problem Statement:
 ## Staged Rollout: Stage 0–4 (~22 Weeks)
 
 ### Philosophy
-Incremental deployment with automated safety gates; each stage can be rolled back in < 1 minute.
+Incremental deployment with automated safety gates; rolling a stage back takes 2–4 minutes of execution time (see ADR-0005). This is distinct from the *rollback decision window* in the timeline table below — how long a stage stays reversible before the next one begins.
 
 ![Stage 0 to Stage 4 rollout timeline](../diagrams/staged-rollout-timeline.png)
 
@@ -210,7 +210,7 @@ systemctl stop aeg-led aeg-config
 - MQTT message loss > 0.1% (serious data loss)
 - OTA update fails or leaves device in bad state
 - Cloud API connection fails
-- Per-second pipeline latency exceeds the 500 ms budget ceiling observed during soak testing (Phase B measured p95 is 56.4 ms, 5.6% of the 1-second budget, across a 285-sample run — see `04-testing-strategy.md`), or shows a sustained upward trend versus that baseline
+- Per-second pipeline latency exceeds the 500 ms budget ceiling observed during soak testing (Phase B measured p95 is 56.4 ms, 5.6% of the 1-second budget, across a 285-sample run — see ADR-0005), or shows a sustained upward trend versus that baseline
 
 **Rollback Procedure:**
 ```
@@ -238,7 +238,7 @@ systemctl stop aeg-mqtt aeg-ota
 **Rollback Trigger:**
 - Sensor reading divergence from Node.js baseline (> 1% error)
 - Database corruption or query failures
-- Per-second pipeline latency exceeds the 500 ms budget ceiling, or any sample drifts materially above the Phase B soak baseline (p95 56.4 ms / 5.6% of the 1-second budget; see `04-testing-strategy.md`)
+- Per-second pipeline latency exceeds the 500 ms budget ceiling, or any sample drifts materially above the Phase B soak baseline (p95 56.4 ms / 5.6% of the 1-second budget; see ADR-0005)
 
 **Rollback Procedure:**
 ```
@@ -265,7 +265,7 @@ sqlite3 /var/lib/aeg/data.db "PRAGMA integrity_check"
 
 **Rollback Trigger (48h Window):**
 - Any service crashes
-- Per-second processing pipeline exceeds the 500 ms budget ceiling, or p95 drifts materially above the Phase B soak baseline (56.4 ms / 5.6% of the 1-second budget — see `04-testing-strategy.md`); `aeg-appserver` is the single largest migration unit in the rollout, so this is the most consequential gate
+- Per-second processing pipeline exceeds the 500 ms budget ceiling, or p95 drifts materially above the Phase B soak baseline (56.4 ms / 5.6% of the 1-second budget — see ADR-0005); `aeg-appserver` is the single largest migration unit in the rollout, so this is the most consequential gate
 - Memory usage trending upward with no return to baseline (full-stack resident baseline is 206 MB; see soak-slope methodology in `04-testing-strategy.md`)
 - Data corruption incidents
 
@@ -383,7 +383,7 @@ Automatic Health Check Failed?
 
 ## Timeline & Resource Requirements
 
-| Stage | Duration | Fleet Size | Rollback Window | Team Load |
+| Stage | Duration | Fleet Size | Rollback Decision Window | Team Load |
 |---|---|---|---|---|
 | Stage 0 | ~1 week (Week 0) | 5–10 devices | 10 minutes | 1 on-call engineer |
 | Stage 1 | ~4 weeks (Weeks 1–5) | 20–30 devices | 10 minutes | 1 on-call engineer |

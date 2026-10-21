@@ -24,11 +24,11 @@
 
 While the multi-process architecture provides basic fault isolation, individual processes face limitations:
 
-1. **Memory Leaks**: Observed in production. A CSV field-expansion leak grew RSS at +13 MB/h, tripping the 500 MB per-service memory cap (auto-restart) after ~14 hours; steady-state CPU p90 rose from ~140% to 169.5% (4-core) as the leak progressed. A larger incident on the 8-core validation rig showed a peak growth rate of +1887 MB over 13 minutes, exhausting memory and forcing a watchdog hardware reset — 98 resets in a single day (roughly one every 15 minutes) before the leak was isolated
+1. **Memory Footprint**: Measured in production. The 16-service / 8-startup-stage topology (~20 OS processes) holds 1538 MB resident during a 3-hour active-load window — about 54% of the ~2.84 GB OS-usable RAM on the 4-core product platform, with no swap configured. Per-process runtime and heap overhead is duplicated across every service rather than shared, and the remaining headroom has to absorb traffic spikes, sensor-count growth, and any single service's memory behaviour at the same time
 2. **GC Pauses**: Unpredictable stop-the-world delays under peak load, with duration scaling with heap size, causing downstream timeouts
 3. **Lack of Compile-Time Safety**: No static type checking on module boundaries; runtime errors in IPC and data validation
 4. **Complex Coordination**: Manual orchestration of process startup order, dependency tracking, and graceful shutdown
-5. **CPU Overhead**: Garbage collection runs frequently; a log-flood incident (20,000 log lines, 19,997 of them reordering messages) drove CPU to 66.7%; process supervisor adds overhead; limited optimization opportunities
+5. **CPU Overhead**: Garbage collection runs frequently; the process supervisor adds overhead across ~20 processes; measured CPU sits at 52% idle and rises to 64% under a 3-hour active load on 4 cores, with load average 3.30 — limited optimization opportunities within the runtime
 
 ---
 
@@ -42,7 +42,7 @@ While the multi-process architecture provides basic fault isolation, individual 
 
 ### Advantages
 1. **Modular**: Each crate/binary is independently restartable; failure isolation
-2. **Memory Safe**: No undefined behavior; Rust compiler prevents leaks at compile time
+2. **Memory Safe**: No undefined behavior, no use-after-free, no data races — enforced at compile time. Memory *growth* is a separate concern and is covered by soak testing
 3. **Deterministic**: No GC; all resource cleanup is explicit (drop semantics)
 4. **Scalable**: Async/await via tokio; efficient concurrency without threads
 5. **Maintainable**: Strong typing catches refactoring errors early
@@ -103,7 +103,7 @@ See **[ADR-0004: Ecosystem Crate Mapping](adr/0004-ecosystem-crate-mapping.md)**
 | **Compile-Time Safety** | Runtime type checking on IPC boundaries | Full compile-time verification | Catches boundary errors before deployment |
 | **Process Coordination** | Manual process-manager orchestration with per-service memory caps (200 MB–2 GB, auto-restart on breach) and dependency tracking | Single supervisor process launches and monitors 14 child-process services; IPC over an internal message bus (not systemd socket activation) | Simpler, standard OS-level management; existing per-service restart behavior is preserved, not lost |
 | **Restart Impact** | Process manager can restart an individual service independently (e.g., on a memory-cap breach) without affecting its siblings | Supervisor restarts affected services independently; 3 restarts observed in the first 66 minutes of a soak test, then 6.7h with zero restarts | Both architectures isolate restarts to the affected service — this was not a Node.js weakness |
-| **Uptime Predictability** | Known leak scenarios require per-service auto-restart (e.g., a CSV field-expansion leak triggers a restart after ~14h at +13 MB/h) | No leaks observed in a 7.8h soak test; uptime limited by hardware, not by GC/heap behavior | Reduces reliance on the per-service memory cap as a safety net |
+| **Uptime Predictability** | Steady-state consumption at 54% of available RAM leaves the per-service memory cap as the only buffer between any sustained growth and a forced restart | The 7.8h soak surfaced allocator-level growth, which was diagnosed and fixed (`MALLOC_ARENA_MAX=2`); the 10.6h re-run ended on a negative slope | Growth becomes diagnosable instead of being absorbed by restarts |
 | **Memory Safety** | Runtime checks only; undefined behavior possible | Compile-time guaranteed; no undefined behavior | Eliminates entire class of memory corruption bugs |
 | **API Breaking Changes** | None | None (backward compatible) | Drop-in replacement |
 | **Implementation Effort** | Baseline (already deployed) | ~22 weeks (Stage 0–4 staged rollout, with Phase A porting work concentrated in Stage 0–2) | Justified by compile-time safety & reliability gains |
@@ -116,29 +116,9 @@ See `../diagrams/module-crate-mapping.svg` for the full crate dependency graph (
 
 ### Dependency Layers
 
-```
-Tier 0 (Pure Data Structures):
-  └─ aeg-config (TOML parsing, no external I/O)
+![Crate dependency tiers, Tier 0 to Tier 4](../diagrams/crate-dependency-tiers.png)
 
-Tier 1 (Foundation Services):
-  ├─ aeg-db (SQLite wrapper, stateless)
-  └─ aeg-file-manager (file I/O primitives)
-
-Tier 2 (Protocol Clients):
-  ├─ aeg-mqtt-client (MQTT client primitives)
-  └─ aeg-python-bridge (IPC to Python subprocess)
-
-Tier 3 (Domain Logic):
-  ├─ aeg-sensors (sensor aggregation, uses aeg-db + aeg-python-bridge)
-  ├─ aeg-metrics (signal RMS aggregation, uses aeg-db + aeg-sensors)
-  ├─ aeg-beacon (serial port control, no shared dependencies)
-  └─ aeg-ota (firmware updates, uses aeg-file-manager)
-
-Tier 4 (Public Interfaces):
-  ├─ aeg-appserver (REST API, uses all Tier 3)
-  └─ aeg-supervisor (single systemd unit; launches and supervises
-     all 14 services as child processes)
-```
+<sub>Vector source: [`crate-dependency-tiers.svg`](../diagrams/crate-dependency-tiers.svg)</sub>
 
 ---
 
@@ -172,48 +152,11 @@ There is a single systemd unit on the device. Underneath it:
 
 ## Data Flow & Concurrency
 
-### Original (Node.js, Synchronous Pipeline)
+![Per-second data flow, Node.js versus Rust](../diagrams/data-flow-pipeline.png)
 
-```
-Cloud MQTT Broker
-       ↓ (1 event per ~100ms)
-MQTT.on('message') [callback in event loop]
-       ↓
-Parse message + validate
-       ↓
-Database write (blocking, then async)
-       ↓
-Trigger sensor aggregation [async/await]
-       ↓
-Compute signal RMS → beacon update
-       ↓ (potentially blocked by GC or worker thread contention)
-REST client polling (separate thread) hangs
-```
+<sub>Vector source: [`data-flow-pipeline.svg`](../diagrams/data-flow-pipeline.svg)</sub>
 
-### New (Rust, Async Pipeline with Isolation)
-
-```
-Cloud MQTT Broker
-       ↓ (1 event per ~100ms)
-rumqttc async::stream::next()
-       ↓ (tokio task, non-blocking)
-Parse message + validate
-       ↓ (spawns task)
-aeg-db async write (async sqlite wrapper)
-       ↓
-Emit "sensor-updated" event on the internal message bus
-       ↓ (aeg-sensors subscribes to the bus)
-aeg-sensors aggregates & computes signal RMS
-       ↓
-aeg-beacon updates indicator (independent service, no blocking)
-       ↓ (all parallel, no contention)
-REST client polling (appserver, async, no blocking)
-       ✓ Measured server-side pipeline (285 one-second samples):
-         median 55.5 ms / p95 56.4 ms / p99 57.7 ms / max 59.5 ms
-         — ~5.5–5.6% of the 1-second budget, 0 samples over 500 ms
-         (breakdown: JSON deserialize 18.1 ms + RMS calc ×3 axes
-         3.7 ms + diagnostics 13.7 ms = 35.5 ms server-side)
-```
+**Measured server-side pipeline** (285 one-second samples): median 55.5 ms / p95 56.4 ms / p99 57.7 ms / max 59.5 ms — roughly 5.5–5.6% of the 1-second budget, with zero samples over 500 ms. Server-side breakdown: JSON deserialise 18.1 ms + RMS calculation across 3 axes 3.7 ms + diagnostics 13.7 ms = 35.5 ms.
 
 ---
 

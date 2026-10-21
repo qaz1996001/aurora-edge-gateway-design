@@ -8,9 +8,11 @@
 
 該閘道器是實時遙測和邊側計算的關鍵聚合層，負責管理工業感測器、設備控制和邊側資料處理。重寫的驅動力來自：
 
-- **效能**：降低 CPU 佔用率與毫秒級感測器資料管道的回應延遲
-- **記憶體安全**：消除長時間運行邊緣進程中的記憶體洩漏和未定義行為
-- **運營可靠性**：在目標 4 核 ARM Cortex-A53 平台（標稱 4 GB RAM，實際可用約 2.84 GB，無 swap）上通過 10.6 小時 soak 測試驗證，全棧常駐記憶體穩定於 206 MB
+- **記憶體餘裕**：Node.js 拓撲常駐 1538 MB，約佔低規格目標平台實際可用 2.84 GB 的 54%（標稱 4 GB，無 swap）——面對任何持續增長，餘裕是以小時計、不是以天計
+- **效能可預測性**：毫秒級感測器資料管道中沒有 stop-the-world GC 暫停
+- **編譯期安全性**：消除長時間運行邊緣進程中的未定義行為與資料競爭
+
+**結果**：Rust 全棧常駐記憶體穩定於 206 MB，在同一台 4 核 ARM Cortex-A53 平台上以 10.6 小時 soak 測試驗證。
 
 ## 如何導覽本 Repository
 
@@ -47,6 +49,8 @@
 - `module-crate-mapping.svg` — Node.js 模組 → Rust crate → 二進位部署對照
 - `deployment-topology.svg` — Rust 拓樸：雲端在上、邊緣設備居中、現場硬體在下
 - `staged-rollout-timeline.svg` — Stage 0–4 部署時間軸與 go/no-go 閘門
+- `crate-dependency-tiers.svg` — Tier 0–4 的 crate 依賴 DAG
+- `data-flow-pipeline.svg` — 逐秒感測器管線：Node.js 與 Rust 對照
 
 ## 核心要點
 
@@ -111,5 +115,7 @@ aurora-edge-gateway-design/
     ├── before-topology.svg / .png
     ├── module-crate-mapping.svg / .png
     ├── deployment-topology.svg / .png
-    └── staged-rollout-timeline.svg / .png
+    ├── staged-rollout-timeline.svg / .png
+    ├── crate-dependency-tiers.svg / .png
+    └── data-flow-pipeline.svg / .png
 ```

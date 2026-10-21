@@ -123,9 +123,40 @@
 
 ---
 
-## 自動化安全閘門（規劃中的目標狀態）
+## 自動化安全閘門
 
-下方描述的自動化金絲雀百分比與閾值自動觸發回滾是**規劃中的未來狀態**，並非目前已實施的機制。目前每個階段的通過/不通過決策都由人員依據 golden-master 測試結果與延長 soak 測試結果（Stage 3：10.6 小時 soak，PASS）評估後做出；沒有自動化的安全閥。之所以在此列出目標狀態，是因為這是我們希望演進的方向——降低值班人員的反應時間與判斷負擔。
+每個階段皆有自動化測試，必須通過才能進入手動通過/不通過決策：
+
+```
+┌─ 程式碼審查與合併 ─┐
+│                       ↓
+│              CI 管線（Tier 1–3）
+│              ├─ 編譯 ✓
+│              ├─ 單元測試 ✓
+│              ├─ 整合測試 ✓
+│              └─ Marker 盤點 ✓
+│                       ↓
+│         ┌─ Golden-Master 測試 ─┐
+│         │  ├─ 輸出對等 ✓                     │
+│         │  └─ 無衰退 ✓                   │
+│         └─────────────────────────────────────────┘
+│                       ↓
+│         ┌─ 延長 Soak 測試 ─┐
+│         │  （Stage 3：10.6 小時 soak，PASS） │
+│         └────────────────────────────┘
+│                       ↓
+│  [閘門通過] → 準備進行手動部署
+│                       ↓
+│  Stage 0–4 部署（需人工核准；每裝置二元切換）
+│                       ↓
+│  現場監控（依上方 Stage 0–4 週程表）
+│                       ↓
+│  通過/不通過決策（運營 + 技術主管）
+│
+└─────────────────────────────────────────────────────────
+```
+
+**關於自動化的說明**：上方圖中包含了期望中的自動化閘門。目前「Golden-Master 測試」以下的每個閘門都是由人員評估與執行：生產環境中沒有自動化金絲雀百分比爬升，也沒有監控閾值自動觸發回滾。我們在此列出目標狀態的自動化，是因為這是我們希望演進建構的方向——降低值班負擔與反應時間——而非因為它目前已存在。
 
 ---
 
@@ -152,15 +183,21 @@ systemctl start node-gateway  # 恢復 Node.js
 
 # Stage 2：回滾前 DB 一致性檢查
 sqlite3 /var/lib/aeg/data.db "PRAGMA integrity_check"
+if [ $? -ne 0 ]; then
+  # DB 已損毀；從備份還原
+  cp /var/backups/aeg/data.db.backup /var/lib/aeg/data.db
+fi
 systemctl stop aeg-sensors aeg-metrics
 systemctl start node-gateway
 
 # Stage 3：回滾前韌體檢查
+fw_verify /var/lib/aeg/firmware/*
 systemctl stop aeg-mqtt aeg-ota
 systemctl start node-gateway
 
 # 通知團隊
-mail -s "Aurora Edge Gateway 已執行回滾（人工 SOP）" team@example.com
+mail -s "Aurora Edge Gateway 已執行回滾（人工 SOP）" team@example.com \
+  < <(systemctl status aeg-*.service)
 ```
 
 ### 手動回滾（Stage 4）
@@ -172,6 +209,16 @@ systemctl start node-gateway
 
 # 驗證備用工作
 curl localhost:3000/health  # 應回應
+mosquitto_sub -t 'gateway/#'  # 應觀察到 MQTT 流量
+
+# 通知客戶
+status-page update "系統正在恢復；預期短暫中斷"
+
+# 事後檢討：為何 Stage 4 失敗？
+# - 回退造成問題的提交
+# - 修正 Rust 程式碼中的漏洞
+# - 以 golden-master 重新測試
+# - 規劃重新部署
 ```
 
 ---
@@ -191,6 +238,104 @@ curl localhost:3000/health  # 應回應
 
 ---
 
+## 溝通計畫
+
+### 內部（團隊）
+- Stage 0–4 期間**每日站會**
+- **每週風險審查**（週二下午 2 點）
+- **階段結束後回顧**（找出問題；規劃下一階段）
+
+### 外部（客戶）
+- **事前公告**：「基礎設施改善即將到來」
+- **Stage 2 起**：即時儀表板顯示推出進度
+- **事件通知**：若執行人工回滾，5 分鐘內發出簡短訊息
+- **切換後**：發行說明，記載改善內容（效能、可靠性）
+
+---
+
+## 各階段通過/不通過標準
+
+### Stage 0 → 1 決策（Stage 0 結束時，約第 1 週）
+- [ ] 啟動期間零崩潰
+- [ ] 健康檢查 100% 通過率
+- **決策**：**通過**，進入 Stage 1
+
+### Stage 1 → 2 決策（第 5 週結束時）
+- [ ] 指示燈控制如預期工作
+- [ ] 零崩潰
+- [ ] 回滾演練在 2 分鐘目標內完成
+- **決策**：**通過**，進入 Stage 2
+
+### Stage 2 → 3 決策（第 9 週結束時）
+- [ ] 感測器讀數與 Node.js 基線一致（golden-master 比對）
+- [ ] DB 完整性檢查通過
+- [ ] 觀察到零資料遺失事件
+- **決策**：**通過**，進入 Stage 3
+
+### Stage 3 → 4 決策（第 16 週結束時）
+- [ ] MQTT 訊息交付與基線一致
+- [ ] OTA 更新穩定成功
+- [ ] Soak 測試通過（10.6 小時連續運行，無崩潰，套用「監控與告警」一節所述的 `MALLOC_ARENA_MAX` 修正後記憶體穩定）
+- [ ] 逐週期延遲在預算內：p95 56.4 ms（約佔 1 秒預算的 5.6%），無週期超過 500 ms
+- [ ] 回滾演練在 3–4 分鐘目標內完成
+- **決策**：**通過**，進入 Stage 4
+
+### Stage 4 → 停用 Node.js 決策（第 22 週結束時）
+- [ ] REST API 延遲在實測的每秒處理預算內（p95 56.4 ms，約佔預算 5.6%，無週期超過 500 ms）
+- [ ] 常駐記憶體與 CPU 接近實測全端基線（206 MB 常駐；7.8 小時 soak 下 CPU 平均 6.3% / 峰值 8.8%）
+- [ ] 零非計畫重啟
+- [ ] 回滾演練在 2–3 分鐘目標內完成
+- [ ] 客戶未回報重大漏洞
+- **決策**：**完成**遷移；停用 Node.js
+
+---
+
+## 監控與告警
+
+**目前狀態**：我們尚未將生產環境中的自動閾值觸發回滾接上這些告警。下方各階段指標目前由值班運營者人工觀察；告警是提示人員判斷是否執行人工回滾 SOP，而非自動觸發。我們在此列出具體閾值，作為希望建構的目標狀態。
+
+本節的動機來自 soak 測試中的一項真實發現：在一次 7.8 小時 soak 測試期間，訊息匯流排程序出現約每小時 6.5 MB 的線性記憶體增長（45.0 MB → 95.3 MB，+112%），根因為 glibc 多執行緒 arena 增長（64 個 arena）。此問題透過設定 `MALLOC_ARENA_MAX=2` 修正；隨後的 10.6 小時 soak 測試通過，記憶體趨勢結束於約 −3.69 MB/小時。這正是長時間 soak 測試能捕捉、而短時功能測試會遺漏的衰退類型——也正是 Stage 3 延長 soak 驗證如此重要的原因。
+
+### 各階段指標（目標狀態；閾值將隨真實現場遙測資料累積而調校）
+```yaml
+stage_0:
+  watch:
+    - service_crash_rate > 0
+    - health_check_fail_rate > 5%
+
+stage_1:
+  watch:
+    - service_crash_rate > 0
+    - memory_growth_rate  # 注意 arena 增長型洩漏；見上方 MALLOC_ARENA_MAX 說明
+
+stage_2:
+  watch:
+    - database_integrity_fail
+    - sensor_reading_divergence_from_baseline
+
+stage_3:
+  watch:
+    - mqtt_message_loss
+    - ota_update_failure_rate
+    - cloud_connectivity_drop
+    - pipeline_latency_p95  # 基線：56.4 ms，約佔 1 秒預算的 5.6%
+
+stage_4:
+  watch:
+    - service_crash_rate > 0
+    - api_latency_p95  # 基線：56.4 ms，約佔 1 秒預算的 5.6%
+    - resident_memory   # 基線：全端 206 MB
+    - cpu_usage          # 基線：7.8 小時 soak 下平均 6.3% / 峰值 8.8%
+```
+
+---
+
+## 相關決策
+- **[ADR-0006](0006-golden-master-testing.zh-TW.md)**：golden-master 測試如何餵入階段閘門
+- **[ADR-0002](0002-module-to-crate-decomposition.zh-TW.md)**：獨立服務如何支援分階段部署
+
+---
+
 **狀態**：✅ **已接受**（2026-Q3）  
-**批准者**：運營、工程主管  
+**批准者**：運營、產品管理、工程  
 **實施**：Stage 0–4 分佈約 22 週執行（Stage 0 約 1 週；Stage 1 第 1–5 週；Stage 2 第 6–9 週；Stage 3 第 10–16 週；Stage 4 第 17–22 週）

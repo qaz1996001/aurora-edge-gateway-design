@@ -8,9 +8,11 @@ This repository documents the architectural decisions, migration strategies, and
 
 The gateway serves as a critical data aggregation and processing layer for industrial sensors, managing real-time telemetry, device control, and edge-side computation. The rewrite was driven by:
 
-- **Performance**: Lower CPU footprint and faster response latencies for millisecond-critical sensor data pipelines
-- **Memory Safety**: Elimination of memory leaks and undefined behavior in long-running edge processes
-- **Operational Reliability**: Validated via a 10.6-hour soak test on the target 4-core ARM Cortex-A53 platform (nominal 4 GB RAM, ~2.84 GB usable, no swap), with the full stack holding steady-state memory of 206 MB
+- **Memory headroom**: the Node.js topology held 1538 MB resident — about 54% of the ~2.84 GB usable RAM on the low-spec target platform (nominal 4 GB, no swap) — leaving hours, not days, of margin against any sustained growth
+- **Deterministic performance**: no stop-the-world GC pauses in millisecond-critical sensor data pipelines
+- **Compile-time safety**: eliminating undefined behaviour and data races in long-running edge processes
+
+**Outcome**: the Rust full stack holds 206 MB steady-state, validated over a 10.6-hour soak test on the same 4-core ARM Cortex-A53 platform.
 
 ## How to Navigate This Repository
 
@@ -47,6 +49,8 @@ Located in `/diagrams/`:
 - `module-crate-mapping.svg` — Node.js module → Rust crate → binary deployment mapping
 - `deployment-topology.svg` — Rust topology: cloud above, edge device in the middle, field hardware below
 - `staged-rollout-timeline.svg` — Stage 0–4 deployment timeline with go/no-go gates
+- `crate-dependency-tiers.svg` — Tier 0–4 crate dependency DAG
+- `data-flow-pipeline.svg` — the per-second sensor pipeline, Node.js versus Rust
 
 ## Key Takeaways
 
@@ -110,5 +114,7 @@ aurora-edge-gateway-design/
     ├── before-topology.svg / .png
     ├── module-crate-mapping.svg / .png
     ├── deployment-topology.svg / .png
-    └── staged-rollout-timeline.svg / .png
+    ├── staged-rollout-timeline.svg / .png
+    ├── crate-dependency-tiers.svg / .png
+    └── data-flow-pipeline.svg / .png
 ```

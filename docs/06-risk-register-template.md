@@ -100,7 +100,7 @@ Risks related to external factors outside team control.
 
 ## Risk Registry Template
 
-### Example Risk: RISK-001
+### RISK-001
 
 | Field | Value |
 |---|---|
@@ -120,7 +120,7 @@ Risks related to external factors outside team control.
 
 ---
 
-### Example Risk: RISK-007
+### RISK-007
 
 | Field | Value |
 |---|---|
@@ -140,7 +140,7 @@ Risks related to external factors outside team control.
 
 ---
 
-### Example Risk: RISK-012
+### RISK-012
 
 | Field | Value |
 |---|---|
@@ -160,7 +160,7 @@ Risks related to external factors outside team control.
 
 ---
 
-### Example Risk: RISK-013
+### RISK-013
 
 | Field | Value |
 |---|---|
@@ -180,7 +180,7 @@ Risks related to external factors outside team control.
 
 ---
 
-### Example Risk: RISK-014
+### RISK-014
 
 | Field | Value |
 |---|---|
@@ -239,7 +239,7 @@ Team lead (or risk owner) assesses:
 | RISK-005 | Tokio Thread Pool Contention | Technical | 🟠 HIGH | In Progress | Alice | 2026-10-15 |
 | RISK-007 | OTA Update Timeout on Slow Network | Technical | 🟡 MEDIUM | Resolved | Bob | 2026-10-08 |
 | RISK-010 | Team Rust Experience | Knowledge | 🟡 MEDIUM | Ongoing | Lead | Continuous |
-| RISK-012 | LED Color RGB Precision | Technical | 🟢 LOW | Deferred to Phase B | Carol | 2026-10-25 |
+| RISK-012 | Indicator Lamp Serial-Port Timing/Enumeration | Technical | 🟢 LOW | Deferred to Phase B | Carol | 2026-10-25 |
 | RISK-013 | Disk Growth from WAV Capture and Service Logs | Operational | 🟠 HIGH | Resolved | Platform team | Complete |
 | RISK-014 | glibc Arena Growth in Message-Bus Process | Technical | 🟠 HIGH | Resolved | Platform team | Complete |
 | RISK-015 | rumqttc Dependency Vulnerability | External | 🟡 MEDIUM | Monitoring | Alice | TBD (dependency update) |
@@ -257,27 +257,27 @@ Team lead (or risk owner) assesses:
    - **Option B**: Implement workaround (e.g., disable feature, add circuit breaker)
    - **Option C**: Halt Stage X; investigate root cause
 
-**Example**: RISK-012 (LED color) could not be resolved by original deadline; decision was made to defer to Phase B because impact is cosmetic (LOW severity).
+**Example**: RISK-012 (indicator lamp serial-port timing) could not be resolved by original deadline; decision was made to defer to Phase B because impact is cosmetic (LOW severity).
 
 ---
 
-## Known Risks (Examples for Interview Context)
+## Known Risks
 
-These are example risks for an **illustrative** Aurora Edge Gateway rewrite; they're not based on the real confidential project:
+These are the risks tracked on the rewrite, with project and device names anonymised. Most never materialised — that is what a register is for. The ones that did are linked to their entry above.
 
-### Technical Example Risks
+### Technical Risks
 1. **Floating-Point Precision Loss**: Sensor readings (voltage, current) computed with slightly different precision in Rust vs. Node.js → affects 0.01% of readings → LOW severity; mitigated by accepting tolerance in golden-master tests
 
 2. **Async/Await Deadlock**: Tokio task tries to acquire two locks in different order than Node.js event loop → potential deadlock under load → HIGH severity; mitigated by explicit lock ordering enforcement and stress testing
 
 3. **Allocator-Level Memory Growth**: Long-running services accumulate retained-but-unused memory inside the allocator even with no leak in application code → gradual RSS growth → MEDIUM severity; mitigated by soak testing and allocator tuning. This risk has already materialised once — see RISK-014
 
-### Operational Example Risks
+### Operational Risks
 1. **Rollback Tooling Missing**: No automated procedure to switch from Rust back to Node.js → manual recovery could take hours → HIGH severity; mitigated by testing rollback procedure weekly
 
 2. **Monitoring Gaps**: Prometheus metrics missing for a new crate → cannot see performance issues until customer reports them → MEDIUM severity; mitigated by mandatory metrics in review checklist
 
-### Knowledge Example Risks
+### Knowledge Risks
 1. **Rust Compiler Learning Curve**: Team takes 4+ weeks to understand borrow checker → development slower than estimated → MEDIUM severity; mitigated by pair programming, doc reviews, training sessions
 
 2. **Key Person Dependency**: Only one engineer fully understands async/tokio architecture → if they leave, codebase at risk → HIGH severity; mitigated by documented architecture, multiple reviewers on async code
@@ -307,7 +307,7 @@ Attendees: Jane (Tech Lead), Bob (Arch), Carol (Ops)
 ✅ RISK-007 (OTA Timeout): RESOLVED
 ✅ RISK-010 (Team Expertise): ONGOING; training on track
    → ACCEPTED; team confident
-⏸️ RISK-012 (LED Color): DEFERRED to Phase B
+⏸️ RISK-012 (Indicator Lamp Serial Timing): DEFERRED to Phase B
    → ACCEPTED; cosmetic only
 
 DECISION: APPROVED for Stage 3 deployment

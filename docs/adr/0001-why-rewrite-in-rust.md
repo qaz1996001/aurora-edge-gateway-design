@@ -8,23 +8,19 @@
 
 ## Context
 
-Aurora Edge Gateway is an industrial IoT data aggregation platform. Our development and validation hardware is an 8-core ARM aarch64 platform with 8 GB RAM — generous enough that the original Node.js implementation looked stable there. The actual product target platform is far more constrained: 4-core ARM Cortex-A53, nominally 4 GB RAM but with only ~2.84 GB actually available to user-space processes after the OS, no swap configured, and 28 GB of disk. This gap between validation hardware and production hardware — not a cost-driven spec downgrade — is the real trigger for this decision.
+Aurora Edge Gateway is an industrial IoT data aggregation platform offered in two hardware configurations. The high-spec variant ships with 8-core ARM aarch64 and 8 GB RAM; the low-spec variant ships with 4-core ARM Cortex-A53, nominally 4 GB RAM but with only ~2.84 GB actually available to user-space processes after the OS, no swap configured, and 28 GB of disk. Node.js implementation runs acceptably on the high-spec variant but continuously hits memory limits on the low-spec variant. Analysis confirmed that a Rust rewrite is the root-cause fix — this mismatch is the real trigger for this decision.
 
 ### Hardware Reality Gap
 
 A 3-hour active-load measurement of the Node.js baseline on the 4-core product platform showed active-process memory at **1538 MB — roughly 54% of the ~2.84 GB actually available** to user space (no swap). CPU usage was 52% idle, rising to 64% after 3 hours active, with a load average of 3.30 against 4 cores. The baseline ran as 16 services across 8 startup phases (about 20 OS processes), with boot taking roughly 2 minutes 30 seconds end to end.
 
-That 54%-of-available-memory floor leaves little headroom to absorb leaks already present in the Node.js implementation:
+That 54%-of-available-memory floor is the core of the rewrite decision: roughly 1.5 GB of the ~2.84 GB available is consumed at steady state, with no swap to fall back on. The remaining headroom has to absorb traffic spikes, accommodate future sensor-count growth, and survive the memory behaviour of any single misbehaving service — and under those conditions, a service growing by even a few MB per hour is hours, not days, away from tripping the per-service 500 MB cap and being force-restarted.
 
-1. **Memory leak severity intensifies**: A CSV field-expansion leak scenario measured on this platform grew RSS at **+13 MB/h**, forcing an automatic restart against the per-service 500 MB cap after about **14 hours**; steady-state CPU p90 climbed from ~140% to **169.5%** (4-core accounting) as the leak progressed.
-2. **Catastrophic scenarios are easy to miss on generous hardware**: on the 8-core/8 GB validation platform, a worse leak scenario was captured rising **+1887 MB RSS over 13 minutes** at its steepest, exhausting memory, driving the system into thrash, starving the watchdog feed, and triggering a hardware-forced reset — **98 resets in a single day, roughly one every 15 minutes**. The validation hardware had enough headroom to mask how close this scenario was to catastrophic; the 4-core/~2.84 GB product hardware would not have that cushion.
-3. **Process stability degrades under log pressure**: a log-flood condition (20,000 lines, of which 19,997 were reordering notices) pushed CPU to **66.7%**, compounding whatever margin remained.
-
-These three failure modes — individually survivable on the 8-core/8 GB validation box — compound quickly once the same software runs on the 4-core/~2.84 GB-available product platform.
+The decision therefore rests on the baseline resource envelope itself, not on any single incident. The Node.js multi-process topology consumed more than half the available memory at idle, leaving no room to absorb the allocator- and runtime-level memory growth that any long-running edge service eventually exhibits. That last point is not hypothetical, and it is worth being precise about the direction of the argument: the rewritten Rust system hit exactly that class of growth during its own soak testing, and the rewrite is what gave us the headroom to diagnose it instead of absorbing another forced restart (see "Memory Growth Found During Soak Testing" below).
 
 ### Methodology Confidence
 
-Large-scale language migration feasibility is validated by recent industry precedent. In 2024, the Bun team executed a substantial codebase rewrite from Zig to Rust using AI-assisted workflows (see [Anthropic's official case study](https://claude.com/resources/articles/ai-code-migration) and [GitHub PR #30412](https://github.com/oven-sh/bun/pull/30412)), completing ~750K lines migration with 99.8% existing test pass rate in 11 days from first commit to merge. This validates:
+Large-scale language migration feasibility is validated by recent industry precedent. In 2026, the Bun team executed a substantial codebase rewrite from Zig to Rust using AI-assisted workflows (see [Anthropic's official case study](https://claude.com/resources/articles/ai-code-migration), [GitHub PR #30412](https://github.com/oven-sh/bun/pull/30412), and [InfoQ coverage](https://www.infoq.com/news/2026/09/bun-AI-rewrite-zig-rust-4-months/)), migrating ~535K lines of Zig into ~750K lines of Rust, with a 99.8% existing test pass rate in 11 days from first commit to merge. This validates:
 - Structured Phase A/B methodology (faithful port, then optimize) scales to large codebases
 - Golden-master testing (ADR-0006) reliably detects behavioral drift where unit tests alone fail
 - Multi-agent parallel workflows accelerate migration while reducing review bottlenecks
@@ -44,10 +40,10 @@ This precedent informed our confidence in the project timeline (Stage 0–4, ~22
 ### Why Rust?
 
 **Memory Safety by Design**
-- Rust's type system eliminates undefined behavior, memory leaks, and data races at compile time
+- Rust's type system eliminates use-after-free, double-free, and data races at compile time. It does **not** eliminate memory growth — reference cycles still leak, and allocator-level growth sits below the language entirely (see the soak-testing section below)
 - No garbage collector → no GC pauses blocking sensor reads
-- Explicit resource management via drop trait → guaranteed cleanup
-- **Result**: Predictable memory behavior; no mysterious out-of-memory crashes
+- Explicit resource management via drop trait → deterministic cleanup at a known point
+- **Result**: memory behaviour becomes attributable — growth has a locatable cause instead of being absorbed by restarts
 
 **Deterministic Performance**
 - No stop-the-world GC pauses → no tail-latency spikes under peak load
@@ -77,7 +73,7 @@ This precedent informed our confidence in the project timeline (Stage 0–4, ~22
 - **Approach**: Run multiple Node.js processes; add caching; increase memory limits
 - **Pros**: Lower engineering effort (no rewrite); leverages existing code
 - **Cons**: 
-  - Masks root cause (memory leaks still present per process)
+  - Does not address the root cause (per-process runtime and heap overhead stays duplicated rather than shared)
   - Increases per-device footprint (infeasible on constrained hardware)
   - Does not solve tail-latency or stability issues
 - **Decision**: Rejected — temporary band-aid; doesn't address fundamental constraints
@@ -104,7 +100,7 @@ This precedent informed our confidence in the project timeline (Stage 0–4, ~22
 #### Option D: Rust (Selected) ✅
 - **Approach**: Full rewrite in Rust with phased rollout
 - **Pros**: 
-  - Eliminates memory leaks by language design
+  - Eliminates use-after-free, double-free, and data races at compile time
   - Performance equivalent to C++ without safety burden
   - Excellent async/concurrency primitives
   - Rich IoT ecosystem
@@ -124,7 +120,7 @@ This precedent informed our confidence in the project timeline (Stage 0–4, ~22
 1. **Memory footprint collapsed**: on the product hardware baseline comparison, full-stack resident memory went from **1538 MB** (Node.js, 3h active load) to **206 MB** (Rust, full stack of 14 supervised services + Python subprocess) — leaving real headroom against the ~2.84 GB available on the 4-core product platform.
 2. **CPU and load dropped sharply**: Node.js measured **64% CPU** after 3h active load with load average **3.30/4 cores**; the Rust rewrite measured **6.3% average / 8.8% peak CPU** and **0.50 average / 1.81 peak load average** over a 7.8-hour soak test — comparable duration, same product-class hardware class.
 3. **Latency became bounded and small**: a per-second pipeline sample of 285 cycles measured p95 **56.4 ms** and p99 **57.7 ms**, consuming roughly **5.6% of the 1-second budget** at p95, with **zero** samples exceeding 500 ms.
-4. **Restart pattern stabilized early**: in soak testing, 3 restarts were concentrated in the first 66 minutes, followed by **6.7 hours with zero restarts** — a different failure shape entirely from the Node.js baseline's recurring ~14-hour restart cycle and the validation-hardware incident's ~15-minute reset cadence.
+4. **Restart pattern stabilized early**: in soak testing, 3 restarts were concentrated in the first 66 minutes, followed by **6.7 hours with zero restarts**.
 5. **Reduced Maintenance Burden**: simpler alerting rules; clearer root causes when issues do occur
 6. **Team Growth**: Engineers gain systems programming skill; transferable to future projects
 

@@ -296,7 +296,7 @@ grep -r "TODO(port)\|FIXME(port)\|PERF(port)" src/ | sort
 
 # Example output:
 # src/sensors/aggregation.rs:42:    // TODO(port): Optimize aggregation loop
-# src/ota/updater.rs:105:   // FIXME(port): RISK-012 — handle slow networks
+# src/ota/updater.rs:105:   // FIXME(port): RISK-007 — handle slow networks
 # src/mqtt/client.rs:63:    // PERF(port): Use Arc<Mutex> instead of clone
 ```
 

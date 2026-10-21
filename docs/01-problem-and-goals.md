@@ -53,7 +53,7 @@ This document outlines the business and technical rationale for a comprehensive 
 - **Behavioral parity**: New system must handle 100% of use cases of the old system (no feature loss)
 
 ### Performance Targets
-| Metric | Node.js Baseline (4-core ARM Cortex-A53, 3h active load) | Rust Target / Measured | Notes |
+| Metric | Node.js Baseline (4-core ARM Cortex-A53, 3h active load) | Rust Measured (same 4-core ARM Cortex-A53 platform) | Notes |
 |---|---|---|---|
 | **Memory usage** | 1538 MB (~54% of ~2.84 GB OS-usable RAM) | 206 MB full-stack resident (14 supervised services + Python subprocess), measured over a 7.8h soak | Collapse per-process overhead into a small set of supervised services |
 | **CPU usage** | 52% idle / 64% active | 6.3% average / 8.8% peak, zero drift over a 7.8h soak | No GC pause jitter |
@@ -62,7 +62,7 @@ This document outlines the business and technical rationale for a comprehensive 
 | **Extended soak validation** | N/A | Longest continuous run to date: 10.6 hours, PASS | No 90-day or multi-month continuous-run data exists for this project |
 
 ### Deployment & Operations
-- Support incremental rollout with a reliable rollback path (binary switch + manual SOP, rollback within 5 minutes per stage)
+- Support incremental rollout with a reliable rollback path (binary switch + manual SOP, rollback execution within 5 minutes overall, 2–4 minutes per stage)
 - Maintain backward compatibility with existing MQTT clients and REST API consumers
 - Reduce operational toil (monitoring, alerting, manual restarts)
 
@@ -85,7 +85,7 @@ This document outlines the business and technical rationale for a comprehensive 
 - **Approach**: Run multiple Node.js processes with load balancer; add caching
 - **Pros**: Lower engineering effort; leverages existing codebase
 - **Cons**: 
-  - Masks root cause; memory leaks still present per process
+  - Does not address the root cause; per-process runtime and heap overhead stays duplicated rather than shared
   - Increases per-device resource footprint
   - Does not solve latency problem
 - **Decision**: Rejected — temporary band-aid, not a solution
@@ -102,7 +102,7 @@ This document outlines the business and technical rationale for a comprehensive 
 ### Option C: Rewrite in Rust (Selected)
 - **Approach**: Complete architectural rewrite in Rust with incremental staged rollout
 - **Pros**: 
-  - Eliminates memory leaks by design
+  - Eliminates use-after-free, double-free, and data races at compile time
   - Zero-cost abstractions for performance
   - Excellent async/concurrency primitives
   - Rich IoT ecosystem
